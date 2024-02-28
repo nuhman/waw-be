@@ -12,7 +12,12 @@ fastify.register(approutes);
 const start = async () => {
   try {
     const port = 3001;
-    await fastify.listen({ port });
+    await fastify.listen({ port }, (err: Error | null, add: string) => {
+      if (err) {
+        console.error("Error occured while listening ", err);
+      }
+      console.log("App listening on: ", add);
+    });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
@@ -20,9 +25,3 @@ const start = async () => {
 };
 
 start();
-
-// async function routes(fastify, options) {
-//   fastify.register(approutes);
-// }
-
-// export default routes;
