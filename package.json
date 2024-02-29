@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fastify/postgres": "^5.2.2",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.1",
     "fastify-cli": "^6.1.1",

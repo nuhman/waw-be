@@ -23,6 +23,14 @@ const authroutes = async (fastify: FastifyInstance, options: object) => {
   fastify.post("/signup", registerSchema, async (request, reply) => {
     return { _id: "fb45j21", email: "demo@example.com", roles: ["user"] };
   });
+  fastify.get("/users", async (request, reply) => {
+    try {
+      const { rows } = await fastify.pg.query("SELECT * FROM users");
+      return rows;
+    } catch (err) {
+      fastify.log.error("failed to fetch all users: ", err);
+    }
+  });
 };
 
 export default authroutes;
