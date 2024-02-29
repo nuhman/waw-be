@@ -1,25 +1,29 @@
-//'use strict';
+import { build } from "./app.js";
 
-import Fastify from "fastify";
-import approutes from "./routes/route.js";
+// define and initialize fastify app instance
+const app = build({ logger: true });
 
-const fastify = Fastify({
-  logger: true,
+// gracefully shutdown the application, on termination
+const listeners = ["SIGINT", "SIGTERM"];
+listeners.forEach((signal) => {
+  // Register an event listener for each termination signal
+  process.on(signal, async () => {
+    try {
+      await app.close();
+      process.exit(0);
+    } catch (err) {
+      console.error("Failed to close the application gracefully:", err);
+      process.exit(1);
+    }
+  });
 });
 
-fastify.register(approutes);
-
+// method to boot up the Fastify app
 const start = async () => {
   try {
-    const port = 3001;
-    await fastify.listen({ port }, (err: Error | null, add: string) => {
-      if (err) {
-        console.error("Error occured while listening ", err);
-      }
-      console.log("App listening on: ", add);
-    });
+    await app.listen({ port: 3000 });
   } catch (err) {
-    fastify.log.error(err);
+    app.log.error("Failed to boot up the application:", err);
     process.exit(1);
   }
 };

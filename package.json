@@ -9,8 +9,7 @@
     "start": "node dist/index.js",
     "start:fastify": "fastify start index.js --watch --pretty-logs",
     "build": "tsc -p tsconfig.json",
-    "dev": "concurrently \"tsc -w\" \"nodemon -w dist dist/index.js\"",
-    "dev:tsc": "tsc -v",
+    "dev": "concurrently \"tsc -w\" \"nodemon -w dist dist/index.js\"",    
     "dev:nodemon": "nodemon dist/index.js"
   },
   "keywords": [],
