@@ -1,5 +1,5 @@
-import { FastifyInstance } from "fastify";
-import { $ref } from "../schemas/auth.schema.js";
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { $ref, RegisterUserInput } from "../schemas/auth.schema.js";
 
 /**
  * Encapsulates the routes
@@ -20,12 +20,38 @@ const authroutes = async (fastify: FastifyInstance, options: object) => {
       },
     },
   };
-  fastify.post("/signup", registerSchema, async (request, reply) => {
-    return { _id: "fb45j21", email: "demo@example.com", roles: ["user"] };
-  });
-  fastify.get("/users", async (request, reply) => {
+
+  fastify.post(
+    "/signup",
+    registerSchema,
+    async (request: FastifyRequest<{ Body: RegisterUserInput }>, reply: FastifyReply) => {
+      const { name, email, password } = request.body;
+
+      return {
+        userid: "fb45j21",
+        name: "Eden Hazard",
+        email: "demo@example.com",
+        role: ["user"],
+      };
+    }
+  );
+
+  const userSchema = {
+    schema: {
+      description: "Get all users registered on the application",
+      tags: ["User"],
+      summary: "Get all users registered on the application",
+      response: {
+        200: $ref("userSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  fastify.get("/users", userSchema, async (request, reply) => {
     try {
       const { rows } = await fastify.pg.query("SELECT * FROM users");
+      console.log(rows);
       return rows;
     } catch (err) {
       fastify.log.error("failed to fetch all users: ", err);
