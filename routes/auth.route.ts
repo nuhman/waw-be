@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { $ref } from "../schemas/auth.schema.js";
 
 /**
  * Encapsulates the routes
@@ -16,30 +17,10 @@ const authroutes = async (
       description: "Sign up a new user",
       tags: ["User", "SignUp"],
       summary: "Sign up a new user",
-      body: {
-        type: "object",
-        required: ["email", "password"],
-        properties: {
-          email: { type: "string" },
-          password: { type: "string" },
-        },
-      },
+      body: $ref("registerUserSchema"),
       response: {
-        200: {
-          type: "object",
-          properties: {
-            _id: { type: "string" },
-            email: { type: "string" },
-            roles: { type: "array", items: { type: "string" } },
-          },
-        },
-        409: {
-          type: "object",
-          properties: {
-            errorcode: { type: "string" },
-            errormessage: { type: "string" },
-          },
-        },
+        200: $ref("registerUserSuccessSchema"),
+        409: $ref("authFailureSchema"),
       },
     },
   };
