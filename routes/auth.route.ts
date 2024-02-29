@@ -7,11 +7,7 @@ import { $ref } from "../schemas/auth.schema.js";
  * @param {Object} options plugin options
  */
 
-const authroutes = async (
-  fastify: FastifyInstance,
-  options: object,
-  next: Function
-) => {
+const authroutes = async (fastify: FastifyInstance, options: object) => {
   const registerSchema = {
     schema: {
       description: "Sign up a new user",
@@ -27,8 +23,6 @@ const authroutes = async (
   fastify.post("/signup", registerSchema, async (request, reply) => {
     return { _id: "fb45j21", email: "demo@example.com", roles: ["user"] };
   });
-
-  next();
 };
 
 export default authroutes;
