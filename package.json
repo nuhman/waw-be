@@ -10,7 +10,8 @@
     "start:fastify": "fastify start index.js --watch --pretty-logs",
     "build": "tsc -p tsconfig.json",
     "dev": "concurrently \"tsc -w\" \"nodemon -w dist dist/index.js\"",
-    "dev:nodemon": "nodemon dist/index.js"
+    "dev:nodemon": "nodemon dist/index.js",
+    "migrate": "node migrate"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
     "fastify-zod": "^1.4.0",
     "nanoid": "^5.0.6",
     "pg": "^8.11.3",
+    "postgrator": "^7.2.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
