@@ -4,7 +4,11 @@ import { buildJsonSchemas } from "fastify-zod";
 // data required from user for registration
 const registerUserSchema = z.object({
   name: z.string(),
-  email: z.string(),
+  email: z
+    .string({
+      invalid_type_error: "email must be a string",
+    })
+    .email(),
   password: z.string().min(6),
 });
 
