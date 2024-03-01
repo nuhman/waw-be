@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
 import { $ref, RegisterUserInput } from "../schemas/auth.schema.js";
+import { hashPassword } from "../utilities/auth.utitily.js";
 
 /**
  * Encapsulates the routes
@@ -30,13 +31,36 @@ const authroutes = async (fastify: FastifyInstance, options: object) => {
       reply: FastifyReply
     ) => {
       const { name, email, password } = request.body;
+
+      // check whether the email already exists in db
+      const userExistCheck = await fastify.pg.query(
+        "SELECT 1 FROM users WHERE email = $1 LIMIT 1",
+        [email]
+      );
+      if ((userExistCheck?.rowCount || 0) > 0) {
+        return reply.code(409).send({
+          errorCode: "AUTH-1.1",
+          errorMessage: "Email already exists.",
+        });
+      }
+
       const userid = nanoid();
       const createdAt = new Date().toISOString();
       const role = ["user"];
+      const hashedPassword = await hashPassword(password);
+
       const query = {
         text: `INSERT INTO users (userid, name, email, passwordhash, created_at, updated_at, role)
                 VALUES($1, $2, $3, $4, $5, $6, $7 ) RETURNING *`,
-        values: [userid, name, email, password, createdAt, createdAt, role],
+        values: [
+          userid,
+          name,
+          email,
+          hashedPassword,
+          createdAt,
+          createdAt,
+          role,
+        ],
       };
       try {
         const { rows } = await fastify.pg.query(query);
@@ -49,10 +73,12 @@ const authroutes = async (fastify: FastifyInstance, options: object) => {
           role,
         };
       } catch (err) {
-        return {
-          errorCode: "AUTH-1",
-          errorMessage: "Signup process failed. Check logs!",
-        };
+        const errorMessage = "Signup process failed due to a server error.";
+        fastify.log.error(errorMessage, err);
+        return reply.code(500).send({
+          errorCode: "AUTH-1.2",
+          errorMessage,
+        });
       }
     }
   );
