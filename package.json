@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --loader ts-node/esm --enable-source-maps bin/test.ts",
     "start": "node dist/index.js",
     "start:fastify": "fastify start index.js --watch --pretty-logs",
     "build": "tsc -p tsconfig.json",
@@ -31,10 +31,14 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@japa/api-client": "^2.0.0-1",
+    "@japa/assert": "^2.0.0-2",
+    "@japa/runner": "^3.0.0-9",
     "@types/node": "^20.11.21",
     "@types/pg": "^8.11.2",
     "concurrently": "^8.2.2",
     "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
 }
