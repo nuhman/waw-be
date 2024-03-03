@@ -1,4 +1,4 @@
-export const mockUsers = [
+const users = [
   {
     name: "Cristiano Ronaldo",
     email: "ronaldo@mail.com",
@@ -9,6 +9,53 @@ export const mockUsers = [
   },
 ];
 
-export const mockUserResponse = {
-  rows: mockUsers,
+const userResponse = {
+  rows: users,
+};
+
+const emptyUserResponse = {
+  rows: [],
+};
+
+const registerUserInfo = {
+  name: "Cristiano Ronaldo",
+  email: "ronaldo@mail.com",
+  password: "PlainPassword",
+};
+
+const registerSuccessResponse = {
+  userid: "jtwrj2B-dghrxNW8p18WE",
+  name: "Cristiano Ronaldo",
+  email: "ronaldo@mail.com",
+  role: ["user"],
+};
+
+const duplicateEmail = {
+  exists: { rowCount: 1 },
+  notExists: { rowCount: 0 },
+};
+
+const registerUserInfoInvalidEmail = {
+  ...registerUserInfo,
+  email: "@mail.com",
+};
+
+const registerUserInfoInvalidPwd = {
+  ...registerUserInfo,
+  password: "fail",
+};
+
+// group related values together for export
+export const mockUsers = {
+  users,
+  userResponse,
+  emptyUserResponse,
+};
+
+export const mockRegister = {
+  registerUserInfo,
+  registerSuccessResponse,
+  duplicateEmail,
+  registerUserInfoInvalidEmail,
+  registerUserInfoInvalidPwd,
 };
