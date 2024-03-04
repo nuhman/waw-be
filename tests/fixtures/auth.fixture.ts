@@ -1,11 +1,30 @@
+const sample = {
+  name: "Cristiano Ronaldo",
+  email: "ronaldo@mail.com",
+  created_at: "2024-02-29T15:24:23.425Z",
+  updated_at: "2024-02-29T15:24:23.425Z",
+  adminRole: "admin",
+  userRole: "user",
+  userids: ["hjF7g9k", "keqwr67n"],
+  plainPassword: "PlainPassword",
+  hashedPassword:
+    "$2b$10$69zzzDuPznEG.Ur5xInJ3OI9J/h7Kmba6TRJsI8VJ/e3GT8fFhSD2",
+  invalidEmail: "@mai.c",
+  nonExistentEmail: "nonexistent@mail.com",
+  wrongPass: "PasswordWrong",
+  invalidPass: "fail",
+  jwtToken: "eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
+  jwtCookie: "access_token=eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
+};
+
 const users = [
   {
-    name: "Cristiano Ronaldo",
-    email: "ronaldo@mail.com",
-    created_at: "2024-02-29T15:24:23.425Z",
-    updated_at: "2024-02-29T15:24:23.425Z",
-    role: ["admin", "user"],
-    userid: "hjF7g9k",
+    userid: sample.userids[0],
+    name: sample.name,
+    email: sample.email,
+    created_at: sample.created_at,
+    updated_at: sample.updated_at,
+    role: [sample.adminRole, sample.userRole],
   },
 ];
 
@@ -18,16 +37,16 @@ const emptyUserResponse = {
 };
 
 const registerUserInfo = {
-  name: "Cristiano Ronaldo",
-  email: "ronaldo@mail.com",
-  password: "PlainPassword",
+  name: sample.name,
+  email: sample.email,
+  password: sample.plainPassword,
 };
 
 const registerSuccessResponse = {
-  userid: "jtwrj2B-dghrxNW8p18WE",
-  name: "Cristiano Ronaldo",
-  email: "ronaldo@mail.com",
-  role: ["user"],
+  userid: sample.userids[1],
+  name: sample.name,
+  email: sample.email,
+  role: [sample.userRole],
 };
 
 const email = {
@@ -37,41 +56,40 @@ const email = {
 
 const registerUserInfoInvalidEmail = {
   ...registerUserInfo,
-  email: "@mail.com",
+  email: sample.invalidEmail,
 };
 
 const registerUserInfoInvalidPwd = {
   ...registerUserInfo,
-  password: "fail",
+  password: sample.invalidPass,
 };
 
 const loginUserInfo = {
-  email: "ronaldo@mail.com",
-  password: "PlainPassword",
+  email: sample.email,
+  password: sample.plainPassword,
 };
 
 const loginUserInfoInvalidEmail = {
   ...loginUserInfo,
-  email: "nonexistent@mail.com",
+  email: sample.nonExistentEmail,
 };
 
 const loginUserInfoInvalidPwd = {
   ...loginUserInfo,
-  password: "invalidPass",
+  password: sample.wrongPass,
 };
 
 const loginEmailQuerySuccessResponse = {
   rowCount: 1,
   rows: [
     {
-      userid: "jtwrj2B-dghrxNW8p18WE",
-      name: "Cristiano Ronaldo",
-      email: "ronaldo@mail.com",
-      role: ["user"],
-      created_at: "2024-02-29T15:24:23.425Z",
-      updated_at: "2024-02-29T15:24:23.425Z",
-      passwordhash:
-        "$2b$10$69zzzDuPznEG.Ur5xInJ3OI9J/h7Kmba6TRJsI8VJ/e3GT8fFhSD2",
+      userid: sample.userids[1],
+      name: sample.name,
+      email: sample.email,
+      role: [sample.userRole],
+      created_at: sample.created_at,
+      updated_at: sample.updated_at,
+      passwordhash: sample.hashedPassword,
     },
   ],
 };
@@ -82,7 +100,7 @@ const loginEmailQueryFailureResponse = {
 };
 
 const loginSuccessResponse = {
-  accessToken: "eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
+  accessToken: sample.jwtToken,
 };
 
 // group related values together for export
@@ -111,5 +129,5 @@ export const mockLogin = {
 };
 
 export const headers = {
-  cookie: "access_token=jwtdummytoken",
+  cookie: sample.jwtCookie,
 };
