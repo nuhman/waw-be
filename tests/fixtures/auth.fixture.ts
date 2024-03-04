@@ -50,6 +50,7 @@ export const mockUsers = {
   users,
   userResponse,
   emptyUserResponse,
+  jwtDecodedUser: registerSuccessResponse,
 };
 
 export const mockRegister = {
@@ -58,4 +59,8 @@ export const mockRegister = {
   duplicateEmail,
   registerUserInfoInvalidEmail,
   registerUserInfoInvalidPwd,
+};
+
+export const headers = {
+  cookie: "access_token=jwtdummytoken",
 };

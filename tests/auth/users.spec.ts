@@ -3,11 +3,13 @@ import { test } from "@japa/runner";
 import * as sinon from "sinon";
 import { build } from "../../app.js";
 import { ERROR_CODES } from "../../utilities/consts/error.const.js";
-import { mockUsers } from "../fixtures/auth.fixture.js";
+import { mockUsers, headers } from "../fixtures/auth.fixture.js";
 
 test.group("Auth /users", (group) => {
   let app: FastifyInstance<any> | null = null;
   let queryStub: sinon.SinonStub;
+  let authStub: sinon.SinonStub;
+  let fastifyStub: sinon.SinonStub;
 
   group.setup(async () => {
     app = build({
@@ -22,23 +24,38 @@ test.group("Auth /users", (group) => {
       await app.close();
     }
     queryStub.restore();
+    fastifyStub.restore();
+    authStub.restore();
   });
 
   group.each.setup(() => {
     if (app) {
       queryStub = sinon.stub(app.pg, "query").resolves(mockUsers.userResponse);
+      fastifyStub = sinon
+        .stub(app.jwt, "verify")
+        .resolves(mockUsers.jwtDecodedUser);
+      authStub = sinon
+        .stub(app, "authenticate")
+        .callsFake(async (request, reply) => {
+          // Mock the request.user as if authentication succeeded
+          request.user = mockUsers.jwtDecodedUser;
+        });
     }
   });
 
   group.each.teardown(() => {
     queryStub.restore();
+    fastifyStub.restore();
+    authStub.restore();
   });
 
   test("Retrieves list of users correctly", async (t) => {
     const response = await app?.inject({
       method: "GET",
       url: "/users",
+      headers,
     });
+
     t.assert.equal(
       response?.statusCode,
       200,
@@ -57,7 +74,9 @@ test.group("Auth /users", (group) => {
     const response = await app?.inject({
       method: "GET",
       url: "/users",
+      headers,
     });
+
     t.assert.equal(
       response?.statusCode,
       200,
@@ -78,6 +97,7 @@ test.group("Auth /users", (group) => {
     const response = await app?.inject({
       method: "GET",
       url: "/users",
+      headers,
     });
 
     assert.equal(
