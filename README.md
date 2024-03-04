@@ -50,22 +50,16 @@ cd waw-be
 npm install
 ```  
   
-3. **Set up the PostgreSQL database**  
-
-- Create a new PostgreSQL database.  
-- Execute the scripts found in the `migrations` folder to set up the required tables.  
-```  
-npm run migrate  
-```  
-  
-4. **Configure environment variables**
+3. **Configure environment variables**
 
 Copy the `.env.example` file to a new file named `.env` and update it with your database connection details and other environment-specific settings.  
 ```  
 cp .env.example .env  
 ```  
   
-5. **Run migrations**  
+4. **Run migrations - Set up the PostgreSQL database**  
+- Create a new PostgreSQL database.  
+- Execute the scripts found in the `migrations` folder to set up the required tables.  
 ```  
 npm run migrate  
 ```  
