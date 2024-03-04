@@ -13,10 +13,14 @@ export const ERROR_CODES = {
     LOGIN: {
       SERVER_ERROR: {
         CODE: "AUTH-101.1",
-        MESSAGE: "Signup process failed due to a server error.",
+        MESSAGE: "Login process failed due to a server error.",
       },
-      CREDENTIAL_MISMATCH: {
+      EMAIL_NOT_EXIST: {
         CODE: "AUTH-101.2",
+        MESSAGE: "Wrong email and/or password provided!",
+      },
+      PASSWORD_NOT_MATCH: {
+        CODE: "AUTH-101.3",
         MESSAGE: "Wrong email and/or password provided!",
       },
     },
@@ -32,6 +36,10 @@ export const ERROR_CODES = {
       FETCH_USER_BY_ID: {
         CODE: "AUTH-000.3",
         MESSAGE: "User with the specified userid does not exist!",
+      },
+      AUTH_REQUIRED: {
+        CODE: "AUTH-000.4",
+        MESSAGE: "Authentication required to access this route",
       },
     },
   },

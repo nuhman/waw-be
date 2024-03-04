@@ -1,14 +1,24 @@
 import Fastify, { FastifyHttpOptions, FastifyInstance } from "fastify";
 import fastifyPostgres from "@fastify/postgres";
-import authroutes from "./routes/auth.route.js";
-import approutes from "./routes/app.route.js";
+import fjwt from "@fastify/jwt";
+import fCookie from "@fastify/cookie";
+import { authDecoratorFactory } from "./decorators/auth.decorator.js";
+import authRoutes from "./routes/auth.route.js";
+import appRoutes from "./routes/app.route.js";
 import { authSchemas } from "./schemas/auth.schema.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 // Environment variables validation
-const requiredEnv = ["DBUSER", "DBPASSWORD", "DBHOST", "DBNAME"];
+const requiredEnv = [
+  "DBUSER",
+  "DBPASSWORD",
+  "DBHOST",
+  "DBNAME",
+  "JWT_SECRET",
+  "COOKIE_SECRET",
+];
 const missingEnv = requiredEnv.filter((envName) => !process.env[envName]);
 if (missingEnv.length) {
   throw new Error(
@@ -36,9 +46,19 @@ export const build = (
     fastify.addSchema(authSchema);
   }
 
+  // register jwt & cookie for auth related decoration
+  fastify.register(fjwt, { secret: process.env.JWT_SECRET || "" });
+  fastify.register(fCookie, { secret: process.env.COOKIE_SECRET || "" });
+
+  // add decorators
+
+  //decorator to verify whether JWT tokens are present for protected routes
+  const { authDecorator } = authDecoratorFactory(fastify);
+  fastify.decorate("authenticate", authDecorator);
+
   // register routes
-  fastify.register(authroutes);
-  fastify.register(approutes);
+  fastify.register(authRoutes);
+  fastify.register(appRoutes);
 
   return fastify;
 };

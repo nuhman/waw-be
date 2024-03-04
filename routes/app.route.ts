@@ -6,10 +6,10 @@ import { FastifyInstance } from "fastify";
  * @param {Object} options plugin options
  */
 
-const approutes = async (fastify: FastifyInstance, options: object) => {
+const appRoutes = async (fastify: FastifyInstance, options: object) => {
   fastify.get("/healthcheck", async (request, reply) => {
     return { message: "App is up and running!" };
   });
 };
 
-export default approutes;
+export default appRoutes;

@@ -1,8 +1,12 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
-import { hashPassword } from "../utilities/auth.utitily.js";
+import { hashPassword, matchPassword } from "../utilities/auth.utitily.js";
 import { ERROR_CODES } from "../utilities/consts/error.const.js";
-import { RegisterUserInput } from "../schemas/auth.schema.js";
+import {
+  RegisterUserInput,
+  LoginUserInput,
+  UserCompleteSchema,
+} from "../schemas/auth.schema.js";
 
 // Factory function pattern used for dependency injection of fastify plugins (e.g., fastify.pg)
 
@@ -69,6 +73,63 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         return rows;
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.FETCH_ALL_USERS;
+        fastify.log.error(MESSAGE, err);
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserLogin: async (
+      request: FastifyRequest<{ Body: LoginUserInput }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { email, password } = request.body;
+        // Attempt to retrieve the user by email
+        const userQuery = await fastify.pg.query(
+          "SELECT * FROM users WHERE email = $1 LIMIT 1",
+          [email]
+        );
+        if (userQuery.rowCount === 0) {
+          const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_EXIST;
+          return reply.code(401).send({
+            errorCode: CODE,
+            errorMessage: MESSAGE,
+          });
+        }
+        const user: UserCompleteSchema = userQuery.rows[0];
+
+        // Verify the password
+        const match = await matchPassword(password, user.passwordhash);
+        if (!match) {
+          const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.PASSWORD_NOT_MATCH;
+          return reply.code(401).send({
+            errorCode: CODE,
+            errorMessage: MESSAGE,
+          });
+        }
+
+        const accessToken = fastify.jwt.sign(
+          {
+            userid: user.userid,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+          { expiresIn: "1h" }
+        );
+
+        reply.setCookie("access_token", accessToken, {
+          path: "/",
+          httpOnly: true,
+          secure: true,
+          sameSite: "strict",
+        });
+
+        return reply.code(200).send({ accessToken });
+      } catch (err) {
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.SERVER_ERROR;
         fastify.log.error(MESSAGE, err);
         return reply.code(500).send({
           errorCode: CODE,

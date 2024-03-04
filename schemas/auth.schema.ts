@@ -56,6 +56,18 @@ const userSchema = z.array(
   })
 );
 
+const userWithPwdHashSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+  role: z.array(z.string()),
+  userid: z.string(),
+  passwordhash: z.string(),
+});
+
+export type UserCompleteSchema = z.infer<typeof userWithPwdHashSchema>;
+
 export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   registerUserSchema,
   registerUserSuccessSchema,
