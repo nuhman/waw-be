@@ -27,7 +27,7 @@ test.group("Auth /signup", (group) => {
   group.each.setup(() => {
     if (app) {
       queryStub = sinon.stub(app.pg, "query");
-      queryStub.onFirstCall().resolves(mockRegister.duplicateEmail.notExists); // Simulate that the duplicate user does not exist
+      queryStub.onFirstCall().resolves(mockRegister.email.notExists); // Simulate that the duplicate user does not exist
       queryStub.onSecondCall().resolves(mockRegister.registerSuccessResponse); // Simulate successful insertion
     }
   });
@@ -36,7 +36,7 @@ test.group("Auth /signup", (group) => {
     queryStub.restore();
   });
 
-  test("Successfully signs up a user when proper payload is passed", async (t) => {
+  test("User Registration Succeeds with Valid Payload", async (t) => {
     const response = await app?.inject({
       method: "POST",
       url: "/signup",
@@ -68,8 +68,8 @@ test.group("Auth /signup", (group) => {
     );
   });
 
-  test("Do not sign up a user with duplicate email and handle error correctly", async (t) => {
-    queryStub.onFirstCall().resolves(mockRegister.duplicateEmail.exists);
+  test("Attempt to Register User with Duplicate Email Properly Returns Error", async (t) => {
+    queryStub.onFirstCall().resolves(mockRegister.email.exists);
 
     const response = await app?.inject({
       method: "POST",
@@ -93,7 +93,7 @@ test.group("Auth /signup", (group) => {
     );
   });
 
-  test("Payload should be validated properly - Empty payload", async (t) => {
+  test("Registration Fails for Empty Payload with Appropriate Validation Response", async (t) => {
     const response = await app?.inject({
       method: "POST",
       url: "/signup",
@@ -112,7 +112,7 @@ test.group("Auth /signup", (group) => {
     );
   });
 
-  test("Payload should be validated properly - Invalid email format", async (t) => {
+  test("Invalid Email Format in Registration Payload Triggers Validation Error", async (t) => {
     const response = await app?.inject({
       method: "POST",
       url: "/signup",
@@ -131,7 +131,7 @@ test.group("Auth /signup", (group) => {
     );
   });
 
-  test("Payload should be validated properly - Password less than 6 characters returns error", async (t) => {
+  test("Password Shorter Than 6 Characters in Registration Payload Returns Validation Error", async (t) => {
     const response = await app?.inject({
       method: "POST",
       url: "/signup",
@@ -150,7 +150,7 @@ test.group("Auth /signup", (group) => {
     );
   });
 
-  test("Handles database errors gracefully", async ({ assert }) => {
+  test("Handles Database Errors Gracefully", async ({ assert }) => {
     if (!app) {
       throw new Error("Application not initialized");
     }

@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { test } from "@japa/runner";
 import { build } from "../app.js";
 
-test.group("GP: Application Setup", (group) => {
+test.group("Application Setup", (group) => {
   let app: FastifyInstance<any> | null = null;
   group.setup(async () => {
     app = build({ logger: true });

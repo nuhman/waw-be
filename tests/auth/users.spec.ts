@@ -49,7 +49,7 @@ test.group("Auth /users", (group) => {
     authStub.restore();
   });
 
-  test("Retrieves list of users correctly", async (t) => {
+  test("Correctly Retrieves a Populated List of Users", async (t) => {
     const response = await app?.inject({
       method: "GET",
       url: "/users",
@@ -68,7 +68,7 @@ test.group("Auth /users", (group) => {
     );
   });
 
-  test("Retrieves list of empty users correctly", async (t) => {
+  test("Correctly Retrieves an Empty List When No Users Are Present", async (t) => {
     // redefine query stub
     queryStub.resolves(mockUsers.emptyUserResponse);
     const response = await app?.inject({
@@ -89,7 +89,7 @@ test.group("Auth /users", (group) => {
     );
   });
 
-  test("Handles database errors gracefully", async ({ assert }) => {
+  test("Handles Database Errors Gracefully", async ({ assert }) => {
     if (!app) {
       throw new Error("Application not initialized");
     }

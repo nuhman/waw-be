@@ -109,7 +109,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           });
         }
 
-        const accessToken = fastify.jwt.sign(
+        const accessToken = await fastify.jwt.sign(
           {
             userid: user.userid,
             email: user.email,
