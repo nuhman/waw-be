@@ -9,7 +9,6 @@ import {
 } from "../schemas/auth.schema.js";
 
 // Factory function pattern used for dependency injection of fastify plugins (e.g., fastify.pg)
-
 export const authControllerFactory = (fastify: FastifyInstance) => {
   return {
     handleUserSignup: async (
@@ -120,10 +119,12 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           { expiresIn: "1h" }
         );
 
+        const isLocalEnv = process.env.APP_ENV === "local";
+
         reply.setCookie("access_token", accessToken, {
           path: "/",
-          httpOnly: true,
-          secure: true,
+          httpOnly: !isLocalEnv,
+          secure: !isLocalEnv,
           sameSite: "strict",
         });
 

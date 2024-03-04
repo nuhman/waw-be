@@ -6,7 +6,10 @@ declare module "fastify" {
     jwt: JWT;
   }
   export interface FastifyInstance {
-    authenticate: any;
+    authenticate: (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => Promise<void>;
   }
 }
 
