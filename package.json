@@ -4,8 +4,8 @@
   "type": "module",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "node --loader ts-node/esm --enable-source-maps bin/test.ts",
+  "scripts": {    
+    "test": "npx tsx --enable-source-maps --trace-uncaught bin/test.ts 2>error.log",    
     "start": "node dist/index.js",
     "start:fastify": "fastify start index.js --watch --pretty-logs",
     "build": "tsc -p tsconfig.json",
