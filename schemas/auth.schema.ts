@@ -64,6 +64,7 @@ const userWithPwdHashSchema = z.object({
   role: z.array(z.string()),
   userid: z.string(),
   passwordhash: z.string(),
+  last_logout_at: z.string().datetime().nullable(),
 });
 
 export type UserCompleteSchema = z.infer<typeof userWithPwdHashSchema>;

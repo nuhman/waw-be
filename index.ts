@@ -1,5 +1,8 @@
 import { build } from "./app.js";
 
+// set application timezone
+process.env.TZ = "UTC";
+
 // define and initialize fastify app instance
 const app = build({ logger: true });
 

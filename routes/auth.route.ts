@@ -9,8 +9,12 @@ import { authControllerFactory } from "../controllers/auth.controller.js";
  */
 
 const authRoutes = async (fastify: FastifyInstance, options: object) => {
-  const { handleUserSignup, handleGetAllUsers, handleUserLogin } =
-    authControllerFactory(fastify);
+  const {
+    handleUserSignup,
+    handleGetAllUsers,
+    handleUserLogin,
+    handleUserLogout,
+  } = authControllerFactory(fastify);
 
   /* Sign Up or Register a new User */
   const registerSchema = {
@@ -66,6 +70,15 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
   };
 
   fastify.post("/login", loginSchema, handleUserLogin);
+
+  /* Log out */
+  fastify.post(
+    "/logout",
+    {
+      preValidation: [fastify.authenticate],
+    },
+    handleUserLogout
+  );
 };
 
 export default authRoutes;

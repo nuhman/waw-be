@@ -22,6 +22,12 @@ type UserPayload = {
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
-    user: UserPayload;
+    user: UserPayload & {
+      iat?: number;
+      exp?: number;
+      aud?: string | string[];
+      iss?: string;
+      sub?: string;
+    };
   }
 }

@@ -41,6 +41,11 @@ export const ERROR_CODES = {
         CODE: "AUTH-000.4",
         MESSAGE: "Authentication required to access this route",
       },
+      TOKEN_EXPIRED: {
+        CODE: "AUTH-000.5",
+        MESSAGE:
+          "Authentication failed: 'access_token' cookie missing or expired",
+      },
     },
   },
 };

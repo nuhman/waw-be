@@ -36,8 +36,8 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       const hashedPassword = await hashPassword(password);
 
       const query = {
-        text: `INSERT INTO users (userid, name, email, passwordhash, created_at, updated_at, role)
-                        VALUES($1, $2, $3, $4, $5, $6, $7 )`,
+        text: `INSERT INTO users (userid, name, email, passwordhash, created_at, updated_at, role, last_logout_at)
+                        VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
         values: [
           userid,
           name,
@@ -46,6 +46,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           createdAt,
           createdAt,
           role,
+          null,
         ],
       };
       try {
@@ -116,7 +117,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
             name: user.name,
             role: user.role,
           },
-          { expiresIn: "1h" }
+          { expiresIn: "24h" }
         );
 
         const isLocalEnv = process.env.APP_ENV === "local";
@@ -135,6 +136,37 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserLogout: async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        console.log("inside handleUserLogout");
+        const user = request.user;
+        console.log({
+          user,
+        });
+
+        // update last_logout_at column value for the user
+        await fastify.pg.query(
+          "UPDATE users SET last_logout_at = $1 WHERE userid = $2",
+          [new Date().toISOString(), user.userid]
+        );
+
+        // clear the access token cookie
+        const isLocalEnv = process.env.APP_ENV === "local";
+        reply.clearCookie("access_token", {
+          path: "/",
+          httpOnly: !isLocalEnv,
+          secure: !isLocalEnv,
+          sameSite: "strict",
+        });
+        return reply.code(200).send({ message: "user logged out!" });
+      } catch (err) {
+        fastify.log.error("Logout Error: ", err);
+        return reply.code(500).send({
+          errorCode: "LOGOUT_ERROR",
+          errorMessage: "Failed to log out.",
         });
       }
     },
