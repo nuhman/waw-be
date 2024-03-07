@@ -7,26 +7,15 @@ import { authDecoratorFactory } from "./decorators/auth.decorator.js";
 import authRoutes from "./routes/auth.route.js";
 import appRoutes from "./routes/app.route.js";
 import { authSchemas } from "./schemas/auth.schema.js";
-import { parseAndFetchRateLimit } from "./utilities/app.utility.js";
+import {
+  constructRequiredEnv,
+  parseAndFetchRateLimit,
+  validateEnv,
+} from "./utilities/app.utility.js";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-// Environment variables validation
-const requiredEnv = [
-  "DBUSER",
-  "DBPASSWORD",
-  "DBHOST",
-  "DBNAME",
-  "JWT_SECRET",
-  "COOKIE_SECRET",
-];
-const missingEnv = requiredEnv.filter((envName) => !process.env[envName]);
-if (missingEnv.length) {
-  throw new Error(
-    `Missing required environment variables: ${missingEnv.join(", ")}`
-  );
-}
+validateEnv(constructRequiredEnv());
 
 //method to initializes a fastify server instance
 export const build = async (
@@ -34,14 +23,14 @@ export const build = async (
 ): Promise<FastifyInstance<any>> => {
   const fastify = Fastify(options);
 
-  // register rate limiting
+  // // Register rate limiting with configurable limits
   await fastify.register(fastifyRateLimit, {
     max: parseAndFetchRateLimit(process.env.GLOBAL_RATE_LIMIT),
     timeWindow: "1 minute",
   });
 
   // register db
-  fastify.register(fastifyPostgres, {
+  await fastify.register(fastifyPostgres, {
     connectionString: `postgres://${encodeURIComponent(
       process.env.DBUSER || ""
     )}:${encodeURIComponent(process.env.DBPASSWORD || "")}@${
@@ -55,18 +44,18 @@ export const build = async (
   }
 
   // register jwt & cookie for auth related decoration
-  fastify.register(fjwt, { secret: process.env.JWT_SECRET || "" });
-  fastify.register(fCookie, { secret: process.env.COOKIE_SECRET || "" });
+  await fastify.register(fjwt, { secret: process.env.JWT_SECRET || "" });
+  await fastify.register(fCookie, { secret: process.env.COOKIE_SECRET || "" });
 
   // add decorators
 
   //decorator to verify whether JWT tokens are present for protected routes
   const { authDecorator } = authDecoratorFactory(fastify);
-  fastify.decorate("authenticate", authDecorator);
+  await fastify.decorate("authenticate", authDecorator);
 
   // register routes
-  fastify.register(authRoutes);
-  fastify.register(appRoutes);
+  await fastify.register(authRoutes);
+  await fastify.register(appRoutes);
 
   return fastify;
 };

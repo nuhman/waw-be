@@ -9,16 +9,23 @@ import {
   UserCompleteSchema,
 } from "../schemas/auth.schema.js";
 
-// Factory function pattern used for dependency injection of fastify plugins (e.g., fastify.pg)
+/**
+ * Creates auth-related route handlers with dependency injected fastify instance.
+ * Factory function pattern used for dependency injection of fastify plugins (e.g., fastify.pg)
+ *
+ * @param {FastifyInstance} fastify - Fastify instance for accessing plugins and utilities.
+ * @returns Object containing route handler functions.
+ */
 export const authControllerFactory = (fastify: FastifyInstance) => {
   return {
+    // Handles user registration.
     handleUserSignup: async (
       request: FastifyRequest<{ Body: RegisterUserInput }>,
       reply: FastifyReply
     ) => {
       const { name, email, password } = request.body;
 
-      // check whether the email already exists in db
+      // Checks for existing user by email.
       const userExistCheck = await fastify.pg.query(
         "SELECT 1 FROM users WHERE email = $1 LIMIT 1",
         [email]
@@ -31,6 +38,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
       }
 
+      // New user registration logic.
       const userid = nanoid();
       const createdAt = new Date().toISOString();
       const role = [GLOBAL.userRole];
@@ -68,6 +76,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
       }
     },
+    // Handles fetching all registered users.
     handleGetAllUsers: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { rows } = await fastify.pg.query("SELECT * FROM users");
@@ -81,6 +90,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
       }
     },
+    // Handles authenticating a registered user via email and password
     handleUserLogin: async (
       request: FastifyRequest<{ Body: LoginUserInput }>,
       reply: FastifyReply
@@ -92,6 +102,8 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           "SELECT * FROM users WHERE email = $1 LIMIT 1",
           [email]
         );
+
+        // if no user with the given email is found, return error
         if (userQuery.rowCount === 0) {
           const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_EXIST;
           return reply.code(401).send({
@@ -101,8 +113,9 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         }
         const user: UserCompleteSchema = userQuery.rows[0];
 
-        // Verify the password
+        // verify the password using bcrypt
         const match = await matchPassword(password, user.passwordhash);
+        // if wrong password was given, return error
         if (!match) {
           const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.PASSWORD_NOT_MATCH;
           return reply.code(401).send({
@@ -111,6 +124,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           });
         }
 
+        // sign the jwt token using the below payload. This payload can be retrieved later via `jwt.verify`
         const accessToken = await fastify.jwt.sign(
           {
             userid: user.userid,
@@ -123,10 +137,11 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         const isLocalEnv = process.env.APP_ENV === GLOBAL.appEnv.local;
 
+        // set the jwt token in the client cookie for proper future access
         reply.setCookie(GLOBAL.authCookie.name, accessToken, {
           path: GLOBAL.authCookie.path,
-          httpOnly: !isLocalEnv,
-          secure: !isLocalEnv,
+          httpOnly: !isLocalEnv, // apply httpOnly if env is not local
+          secure: !isLocalEnv, // apply secure if env is not local
           sameSite: GLOBAL.authCookie.sameSite as
             | boolean
             | "strict"
@@ -135,6 +150,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
             | undefined,
         });
 
+        // login was successful, send back the jwt token in response
         return reply.code(200).send({ accessToken });
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.SERVER_ERROR;
@@ -145,11 +161,13 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
       }
     },
+    // handles logging out an already logged in user.
     handleUserLogout: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        // request contains user info - it was added via `authenticate` decorator
         const user = request.user;
 
-        // update last_logout_at column value for the user
+        // update last_logout_at column value for the given user
         await fastify.pg.query(
           "UPDATE users SET last_logout_at = $1 WHERE userid = $2",
           [new Date().toISOString(), user.userid]
@@ -168,6 +186,8 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
             | "none"
             | undefined,
         });
+
+        // log out was successful
         return reply.code(200).send(MESSAGES.logoutSuccess);
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.LOGOUT_ERROR;

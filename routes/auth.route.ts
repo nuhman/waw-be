@@ -4,11 +4,11 @@ import { authControllerFactory } from "../controllers/auth.controller.js";
 import { parseAndFetchRateLimit } from "../utilities/app.utility.js";
 
 /**
- * Encapsulates the routes
- * @param {FastifyInstance} fastify  Encapsulated Fastify Instance
- * @param {Object} options plugin options
+ * Registers authentication-related routes.
+ *
+ * @param {FastifyInstance} fastify - The encapsulated Fastify instance.
+ * @param {object} options - Plugin options, if any.
  */
-
 const authRoutes = async (fastify: FastifyInstance, options: object) => {
   const {
     handleUserSignup,
@@ -17,7 +17,7 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserLogout,
   } = authControllerFactory(fastify);
 
-  /* Sign Up or Register a new User */
+  // Define schema for user registration endpoint.
   const registerSchema = {
     schema: {
       description: "Sign up a new user",
@@ -31,10 +31,12 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
+  // User registration route
   fastify.post(
     "/signup",
     {
       config: {
+        // Apply custom rate limiting configuration to this route
         rateLimit: {
           max: parseAndFetchRateLimit(process.env.AUTH_RATE_LIMIT, 5),
         },
@@ -44,7 +46,7 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserSignup
   );
 
-  /* Retrieve list of all users present in the system */
+  // Schema for fetching all users
   const userSchema = {
     schema: {
       description: "Get all users registered on the application",
@@ -57,16 +59,17 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
+  // Route to get all users, requires authentication
   fastify.get(
     "/users",
     {
-      preValidation: [fastify.authenticate],
+      preValidation: [fastify.authenticate], // Ensure user is authenticated
       schema: userSchema.schema,
     },
     handleGetAllUsers
   );
 
-  /* Log In a valid user */
+  // Schema for user login
   const loginSchema = {
     schema: {
       description: "Log In a valid user",
@@ -81,10 +84,12 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
+  // User login route
   fastify.post(
     "/login",
     {
       config: {
+        // Apply custom rate limiting configuration to this route
         rateLimit: {
           max: parseAndFetchRateLimit(process.env.AUTH_RATE_LIMIT, 5),
         },
@@ -94,11 +99,11 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserLogin
   );
 
-  /* Log out */
+  // Logout route, requires user to be authenticated
   fastify.post(
     "/logout",
     {
-      preValidation: [fastify.authenticate],
+      preValidation: [fastify.authenticate], // Ensure user is authenticated
     },
     handleUserLogout
   );
