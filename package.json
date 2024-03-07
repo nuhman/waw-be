@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx tsx --enable-source-maps --trace-uncaught bin/test.ts 2>error.log",
+    "test:single": "npx tsx --enable-source-maps --trace-uncaught bin/test.ts --files=auth/logout",
     "start": "node dist/index.js",
     "start:fastify": "fastify start index.js --watch --pretty-logs",
     "build": "tsc -p tsconfig.json",

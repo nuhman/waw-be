@@ -23,6 +23,10 @@ export const ERROR_CODES = {
         CODE: "AUTH-101.3",
         MESSAGE: "Wrong email and/or password provided!",
       },
+      LOGOUT_ERROR: {
+        CODE: "AUTH-101.4",
+        MESSAGE: "Unexpected error occured - failed to log out."
+      }
     },
     USER: {
       FETCH_ALL_USERS: {

@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
 import { hashPassword, matchPassword } from "../utilities/auth.utitily.js";
 import { ERROR_CODES } from "../utilities/consts/error.const.js";
+import { GLOBAL, MESSAGES } from "../utilities/consts/app.const.js";
 import {
   RegisterUserInput,
   LoginUserInput,
@@ -32,7 +33,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
       const userid = nanoid();
       const createdAt = new Date().toISOString();
-      const role = ["user"];
+      const role = [GLOBAL.userRole];
       const hashedPassword = await hashPassword(password);
 
       const query = {
@@ -85,7 +86,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       reply: FastifyReply
     ) => {
       try {
-        const { email, password } = request.body  as LoginUserInput;
+        const { email, password } = request.body as LoginUserInput;
         // Attempt to retrieve the user by email
         const userQuery = await fastify.pg.query(
           "SELECT * FROM users WHERE email = $1 LIMIT 1",
@@ -117,16 +118,21 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
             name: user.name,
             role: user.role,
           },
-          { expiresIn: "24h" }
+          { expiresIn: GLOBAL.authCookie.expiry }
         );
 
-        const isLocalEnv = process.env.APP_ENV === "local";
+        const isLocalEnv = process.env.APP_ENV === GLOBAL.appEnv.local;
 
-        reply.setCookie("access_token", accessToken, {
-          path: "/",
+        reply.setCookie(GLOBAL.authCookie.name, accessToken, {
+          path: GLOBAL.authCookie.path,
           httpOnly: !isLocalEnv,
           secure: !isLocalEnv,
-          sameSite: "strict",
+          sameSite: GLOBAL.authCookie.sameSite as
+            | boolean
+            | "strict"
+            | "lax"
+            | "none"
+            | undefined,
         });
 
         return reply.code(200).send({ accessToken });
@@ -150,19 +156,24 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         );
 
         // clear the access token cookie
-        const isLocalEnv = process.env.APP_ENV === "local";
-        reply.clearCookie("access_token", {
-          path: "/",
+        const isLocalEnv = process.env.APP_ENV === GLOBAL.appEnv.local;
+        reply.clearCookie(GLOBAL.authCookie.name, {
+          path: GLOBAL.authCookie.path,
           httpOnly: !isLocalEnv,
           secure: !isLocalEnv,
-          sameSite: "strict",
+          sameSite: GLOBAL.authCookie.sameSite as
+            | boolean
+            | "strict"
+            | "lax"
+            | "none"
+            | undefined,
         });
-        return reply.code(200).send({ message: "user logged out!" });
+        return reply.code(200).send(MESSAGES.logoutSuccess);
       } catch (err) {
-        fastify.log.error("Logout Error: ", err);
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.LOGOUT_ERROR;
         return reply.code(500).send({
-          errorCode: "LOGOUT_ERROR",
-          errorMessage: "Failed to log out.",
+          errorCode: CODE,
+          errorMessage: MESSAGE,
         });
       }
     },
