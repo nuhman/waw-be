@@ -10,7 +10,7 @@ test.group("Auth /signup", (group) => {
   let queryStub: sinon.SinonStub;
 
   group.setup(async () => {
-    app = build({
+    app = await build({
       logger: {
         level: "error",
       },

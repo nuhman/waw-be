@@ -15,6 +15,7 @@ const sample = {
   invalidPass: "fail",
   jwtToken: "eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
   jwtCookie: "access_token=eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
+  jwtIssuedTimeStamps: [{ low: 1709798672, high: 1709798972 }],
 };
 
 const users = [
@@ -28,8 +29,19 @@ const users = [
   },
 ];
 
+const usersWithLogoutInfo = [
+  {
+    ...users,
+    last_logout_at: null,
+  },
+];
+
 const userResponse = {
   rows: users,
+};
+
+const userResponseWithLogoutInfo = {
+  rows: usersWithLogoutInfo,
 };
 
 const emptyUserResponse = {
@@ -47,6 +59,7 @@ const registerSuccessResponse = {
   name: sample.name,
   email: sample.email,
   role: [sample.userRole],
+  iat: sample.jwtIssuedTimeStamps[0].low,
 };
 
 const email = {
@@ -107,6 +120,7 @@ const loginSuccessResponse = {
 export const mockUsers = {
   users,
   userResponse,
+  userResponseWithLogoutInfo,
   emptyUserResponse,
   jwtDecodedUser: registerSuccessResponse,
 };

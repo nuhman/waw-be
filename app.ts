@@ -7,6 +7,7 @@ import { authDecoratorFactory } from "./decorators/auth.decorator.js";
 import authRoutes from "./routes/auth.route.js";
 import appRoutes from "./routes/app.route.js";
 import { authSchemas } from "./schemas/auth.schema.js";
+import { parseAndFetchRateLimit } from "./utilities/app.utility.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -35,7 +36,7 @@ export const build = async (
 
   // register rate limiting
   await fastify.register(fastifyRateLimit, {
-    max: 60,
+    max: parseAndFetchRateLimit(process.env.GLOBAL_RATE_LIMIT),
     timeWindow: "1 minute",
   });
 

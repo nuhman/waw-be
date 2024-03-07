@@ -11,7 +11,7 @@ test.group("Auth /login", (group) => {
   let fastifyStub: sinon.SinonStub;
 
   group.setup(async () => {
-    app = build({
+    app = await build({
       logger: {
         level: "error",
       },

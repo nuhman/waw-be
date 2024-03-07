@@ -12,7 +12,7 @@ test.group("Auth /users", (group) => {
   let fastifyStub: sinon.SinonStub;
 
   group.setup(async () => {
-    app = build({
+    app = await build({
       logger: {
         level: "error",
       },
@@ -69,8 +69,9 @@ test.group("Auth /users", (group) => {
   });
 
   test("Correctly Retrieves an Empty List When No Users Are Present", async (t) => {
-    // redefine query stub
-    queryStub.resolves(mockUsers.emptyUserResponse);
+    // first DB query will be made by auth decorator,
+    // so second DB query (which happens inside the route logic) is what we are interested in
+    queryStub.onSecondCall().resolves(mockUsers.emptyUserResponse);
     const response = await app?.inject({
       method: "GET",
       url: "/users",
@@ -93,7 +94,9 @@ test.group("Auth /users", (group) => {
     if (!app) {
       throw new Error("Application not initialized");
     }
-    queryStub.rejects(new Error("Database error"));
+    // first DB query will be made by auth decorator,
+    // so second DB query (which happens inside the route logic) is what we are interested in
+    queryStub.onSecondCall().rejects(new Error("Database error"));
     const response = await app?.inject({
       method: "GET",
       url: "/users",

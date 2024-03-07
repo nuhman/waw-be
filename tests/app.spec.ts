@@ -5,7 +5,7 @@ import { build } from "../app.js";
 test.group("Application Setup", (group) => {
   let app: FastifyInstance<any> | null = null;
   group.setup(async () => {
-    app = build({ logger: true });
+    app = await build({ logger: true });
     await app.ready();
   });
   group.teardown(async () => {

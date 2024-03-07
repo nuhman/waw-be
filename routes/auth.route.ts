@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { $ref } from "../schemas/auth.schema.js";
 import { authControllerFactory } from "../controllers/auth.controller.js";
+import { parseAndFetchRateLimit } from "../utilities/app.utility.js";
 
 /**
  * Encapsulates the routes
@@ -30,7 +31,18 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
-  fastify.post("/signup", registerSchema, handleUserSignup);
+  fastify.post(
+    "/signup",
+    {
+      config: {
+        rateLimit: {
+          max: parseAndFetchRateLimit(process.env.AUTH_RATE_LIMIT, 5),
+        },
+      },
+      schema: registerSchema.schema,
+    },
+    handleUserSignup
+  );
 
   /* Retrieve list of all users present in the system */
   const userSchema = {
@@ -74,7 +86,7 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     {
       config: {
         rateLimit: {
-          max: 5,
+          max: parseAndFetchRateLimit(process.env.AUTH_RATE_LIMIT, 5),
         },
       },
       schema: loginSchema.schema,
