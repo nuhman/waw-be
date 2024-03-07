@@ -85,7 +85,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       reply: FastifyReply
     ) => {
       try {
-        const { email, password } = request.body;
+        const { email, password } = request.body  as LoginUserInput;
         // Attempt to retrieve the user by email
         const userQuery = await fastify.pg.query(
           "SELECT * FROM users WHERE email = $1 LIMIT 1",
@@ -141,11 +141,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
     },
     handleUserLogout: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        console.log("inside handleUserLogout");
         const user = request.user;
-        console.log({
-          user,
-        });
 
         // update last_logout_at column value for the user
         await fastify.pg.query(

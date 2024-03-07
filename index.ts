@@ -4,7 +4,7 @@ import { build } from "./app.js";
 process.env.TZ = "UTC";
 
 // define and initialize fastify app instance
-const app = build({ logger: true });
+const app = await build({ logger: true });
 
 // gracefully shutdown the application, on termination
 const listeners = ["SIGINT", "SIGTERM"];

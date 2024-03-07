@@ -1,4 +1,5 @@
 import Fastify, { FastifyHttpOptions, FastifyInstance } from "fastify";
+import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyPostgres from "@fastify/postgres";
 import fjwt from "@fastify/jwt";
 import fCookie from "@fastify/cookie";
@@ -27,10 +28,16 @@ if (missingEnv.length) {
 }
 
 //method to initializes a fastify server instance
-export const build = (
+export const build = async (
   options: FastifyHttpOptions<any> | undefined
-): FastifyInstance<any> => {
+): Promise<FastifyInstance<any>> => {
   const fastify = Fastify(options);
+
+  // register rate limiting
+  await fastify.register(fastifyRateLimit, {
+    max: 60,
+    timeWindow: "1 minute",
+  });
 
   // register db
   fastify.register(fastifyPostgres, {

@@ -69,7 +69,18 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
-  fastify.post("/login", loginSchema, handleUserLogin);
+  fastify.post(
+    "/login",
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+        },
+      },
+      schema: loginSchema.schema,
+    },
+    handleUserLogin
+  );
 
   /* Log out */
   fastify.post(
