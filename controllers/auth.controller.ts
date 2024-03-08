@@ -7,6 +7,8 @@ import {
   RegisterUserInput,
   LoginUserInput,
   UserCompleteSchema,
+  EmailVerificationInput,
+  EmailVerificationResetInput,
 } from "../schemas/auth.schema.js";
 
 /**
@@ -44,7 +46,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       const role = [GLOBAL.userRole];
       const hashedPassword = await hashPassword(password);
 
-      const query = {
+      const userQuery = {
         text: `INSERT INTO users (userid, name, email, passwordhash, created_at, updated_at, role, last_logout_at)
                         VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
         values: [
@@ -58,8 +60,30 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           null,
         ],
       };
+
+      // email verification
+      const emailToken = nanoid(6);
+      const emailTokenExpiryAt = new Date(
+        new Date().getTime() + 60 * 1000
+      ).toISOString();
+
+      const emailVerificationQuery = {
+        text: `INSERT INTO user_verification (userid, email_token, email_token_expires_at, email_verified_status, phonenumber_token, phonenumber_token_expires_at, phonenumber_verified_status)
+        VALUES($1, $2, $3, $4, $5, $6, $7)`,
+        values: [
+          userid,
+          emailToken,
+          emailTokenExpiryAt,
+          false,
+          emailToken,
+          emailTokenExpiryAt,
+          false,
+        ],
+      };
+
       try {
-        await fastify.pg.query(query);
+        await fastify.pg.query(userQuery);
+        await fastify.pg.query(emailVerificationQuery);
         reply.code(201);
         return {
           userid,
@@ -191,6 +215,69 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         return reply.code(200).send(MESSAGES.logoutSuccess);
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.LOGOUT_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserEmailVerify: async (
+      request: FastifyRequest<{ Body: EmailVerificationInput }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { userid, verificationCode } = request.body;
+
+        // Check if the code matches and is not expired
+        const res = await fastify.pg.query(
+          "SELECT 1 FROM user_verification WHERE userid = $1 AND email_token = $2 AND email_token_expires_at > NOW()",
+          [userid, verificationCode]
+        );
+
+        // code is valid
+        if (res?.rowCount && res.rowCount > 0) {
+          // so, update email_verified status to true
+          await fastify.pg.query(
+            "UPDATE user_verification SET email_verified_status = true WHERE userid = $1",
+            [userid]
+          );
+          return reply.code(200).send(MESSAGES.emailVerifySuccess);
+        }
+        return reply.code(401).send({
+          errorCode: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.CODE,
+          errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
+        });
+      } catch (err) {
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
+        fastify.log.error(MESSAGE, err);
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserEmailVerifyReset: async (
+      request: FastifyRequest<{ Body: EmailVerificationResetInput }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { userid } = request.body;
+        const emailToken = nanoid(6);
+        const emailTokenExpiryAt = new Date(
+          new Date().getTime() + 60 * 1000
+        ).toISOString();
+
+        const emailVerificationQuery = {
+          text: `UPDATE user_verification SET email_token = $1, email_token_expires_at = $2, email_verified_status = $3 WHERE userid = $4`,
+          values: [emailToken, emailTokenExpiryAt, false, userid],
+        };
+
+        await fastify.pg.query(emailVerificationQuery);
+
+        return reply.code(200).send(MESSAGES.emailVerifyCodeReset);
+      } catch (err) {
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
+        fastify.log.error(err);
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,

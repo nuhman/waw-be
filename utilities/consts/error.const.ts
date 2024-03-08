@@ -26,6 +26,10 @@ export const ERROR_CODES = {
       LOGOUT_ERROR: {
         CODE: "AUTH-101.4",
         MESSAGE: "Unexpected error occured - failed to log out."
+      },
+      EMAIL_VERIFY_FAILURE: {
+        CODE: "AUTH-101.5",
+        MESSAGE: "Verification code is invalid/missing/expired"
       }
     },
     USER: {

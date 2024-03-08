@@ -69,6 +69,27 @@ const userWithPwdHashSchema = z.object({
 
 export type UserCompleteSchema = z.infer<typeof userWithPwdHashSchema>;
 
+const emailVerificationRequestSchema = z.object({
+  userid: z.string(),
+  verificationCode: z.string(),
+});
+
+export type EmailVerificationInput = z.infer<
+  typeof emailVerificationRequestSchema
+>;
+
+const emailVerificationSuccessSchema = z.object({
+  message: z.string(),
+});
+
+const emailVerificationResetRequestSchema = z.object({
+  userid: z.string()
+});
+
+export type EmailVerificationResetInput = z.infer<
+  typeof emailVerificationResetRequestSchema
+>;
+
 export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   registerUserSchema,
   registerUserSuccessSchema,
@@ -76,4 +97,7 @@ export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   loginUserSuccessSchema,
   authFailureSchema,
   userSchema,
+  emailVerificationRequestSchema,
+  emailVerificationSuccessSchema,
+  emailVerificationResetRequestSchema,
 });

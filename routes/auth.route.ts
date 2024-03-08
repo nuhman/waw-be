@@ -15,6 +15,8 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleGetAllUsers,
     handleUserLogin,
     handleUserLogout,
+    handleUserEmailVerify,
+    handleUserEmailVerifyReset,
   } = authControllerFactory(fastify);
 
   // Define schema for user registration endpoint.
@@ -107,6 +109,39 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
     handleUserLogout
   );
+
+  // Verify Email using secret token  
+  const verifyEmailSchema = {
+    schema: {
+      description: "Verify email of a signed up user",
+      tags: ["User", "SignUp", "Verification"],
+      summary: "Verify email of a signed up user",
+      body: $ref("emailVerificationRequestSchema"),
+      response: {
+        200: $ref("emailVerificationSuccessSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  fastify.post("/verifyEmail", verifyEmailSchema, handleUserEmailVerify);
+
+  // Reset secret token to validate email
+  const verifyEmailResetSchema = {
+    schema: {
+      description: "Reset and send email verification code",
+      tags: ["User", "SignUp", "Verification"],
+      summary: "Reset and send email verification code",
+      body: $ref("emailVerificationResetRequestSchema"),
+      response: {
+        200: $ref("emailVerificationSuccessSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  fastify.post("/verifyEmailReset", verifyEmailResetSchema, handleUserEmailVerifyReset);
+
 };
 
 export default authRoutes;
