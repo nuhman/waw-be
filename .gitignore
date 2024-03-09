@@ -2,3 +2,6 @@
 dist/
 .env
 error.log
+test-errors.log
+service-combined.log
+service-error.log

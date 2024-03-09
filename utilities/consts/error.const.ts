@@ -13,6 +13,10 @@ export const ERROR_CODES = {
         CODE: "AUTH-100.3",
         MESSAGE: "Sending code to email failed",
       },
+      EMAIL_TRANSPORTER_FAILURE: {
+        CODE: "AUTH-100.4",
+        MESSAGE: "Failed to initialize email transporter service. Please try again!"
+      }
     },
     LOGIN: {
       SERVER_ERROR: {

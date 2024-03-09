@@ -3,11 +3,18 @@ export const MESSAGES = {
     message: "User successfully logged out!",
   },
   emailVerifySuccess: {
-    message: "Email Successfully Verified!",
+    message: "Email verification using token completed successfullly",
   },
   emailVerifyCodeReset: {
     message: "New verification code have been sent to your registered email!",
   },
+  sendEmailVerificationCode: "Send verification code to the email provided",
+  userRecordsAdded: "Added record to the users table",
+  userVerificationRecordsAdded: "Added record to the user_verification table",
+  lastLogoutUpdated: "Last logout timestamp updated for user to current time",
+  emailtokenRegenerated:
+    "Email verification token regeneration successfully updated in the database",
+  executionCompleted: "Method execution completed",
 };
 
 export const GLOBAL = {
@@ -24,3 +31,5 @@ export const GLOBAL = {
     expiry: "24h",
   },
 };
+
+

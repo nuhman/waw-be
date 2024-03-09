@@ -1,3 +1,5 @@
+import { customAlphabet } from "nanoid";
+
 /**
  * Parse a string rate-limit value and returns its corresponding number
  *
@@ -56,3 +58,16 @@ export const validateEnv = (requiredEnv: Array<string>): void => {
     );
   }
 };
+
+/**
+ * Generate a short id for tracking a request for logging purpose
+ *
+ * @param {number} length - length of the id
+ */
+export const generateShortId = (length: number = 6): string => {
+  const alphabets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const nanoid = customAlphabet(alphabets, length);
+  const id = nanoid();
+  return id;
+};
+
