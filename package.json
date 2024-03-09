@@ -5,14 +5,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx tsx --enable-source-maps --trace-uncaught bin/test.ts 2>error.log",
+    "test": "npx tsx --enable-source-maps --trace-uncaught bin/test.ts 2>test-errors.log",
     "test:single": "npx tsx --enable-source-maps --trace-uncaught bin/test.ts --files=auth/logout",
     "start": "node dist/index.js",
     "start:fastify": "fastify start index.js --watch --pretty-logs",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && npm run copy-templates",
     "dev": "concurrently \"tsc -w\" \"nodemon -w dist dist/index.js\"",
     "dev:nodemon": "nodemon dist/index.js",
-    "migrate": "node migrate"
+    "migrate": "node migrate",
+    "copy-templates": "copyfiles -u 1 templates/* dist/templates/"
   },
   "keywords": [],
   "author": "",
@@ -29,10 +30,13 @@
     "fastify-cli": "^6.1.1",
     "fastify-plugin": "^4.5.1",
     "fastify-zod": "^1.4.0",
+    "handlebars": "^4.7.8",
     "nanoid": "^5.0.6",
+    "nodemailer": "^6.9.12",
     "pg": "^8.11.3",
     "postgrator": "^7.2.0",
     "sinon": "^17.0.1",
+    "winston": "^3.12.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -40,9 +44,11 @@
     "@japa/assert": "^2.0.0-2",
     "@japa/runner": "^3.0.0-9",
     "@types/node": "^20.11.21",
+    "@types/nodemailer": "^6.4.14",
     "@types/pg": "^8.11.2",
     "@types/sinon": "^17.0.3",
     "concurrently": "^8.2.2",
+    "copyfiles": "^2.4.1",
     "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

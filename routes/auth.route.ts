@@ -110,7 +110,7 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserLogout
   );
 
-  // Verify Email using secret token  
+  // Verify Email using secret token
   const verifyEmailSchema = {
     schema: {
       description: "Verify email of a signed up user",
@@ -140,8 +140,11 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
-  fastify.post("/verifyEmailReset", verifyEmailResetSchema, handleUserEmailVerifyReset);
-
+  fastify.post(
+    "/verifyEmailReset",
+    verifyEmailResetSchema,
+    handleUserEmailVerifyReset
+  );
 };
 
 export default authRoutes;

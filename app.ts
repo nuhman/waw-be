@@ -3,6 +3,7 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyPostgres from "@fastify/postgres";
 import fjwt from "@fastify/jwt";
 import fCookie from "@fastify/cookie";
+import logger from "./utilities/logger.js";
 import { authDecoratorFactory } from "./decorators/auth.decorator.js";
 import authRoutes from "./routes/auth.route.js";
 import appRoutes from "./routes/app.route.js";
@@ -12,6 +13,7 @@ import {
   parseAndFetchRateLimit,
   validateEnv,
 } from "./utilities/app.utility.js";
+import { getEmailTransporter } from "./utilities/email.utility.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -23,7 +25,12 @@ export const build = async (
 ): Promise<FastifyInstance<any>> => {
   const fastify = Fastify(options);
 
-  // // Register rate limiting with configurable limits
+  // Add the onRequest hook here
+  fastify.addHook("onRequest", async (request, reply) => {
+    logger.info(`Incoming request: ${request.method} ${request.url}`);
+  });
+
+  // Register rate limiting with configurable limits
   await fastify.register(fastifyRateLimit, {
     max: parseAndFetchRateLimit(process.env.GLOBAL_RATE_LIMIT),
     timeWindow: "1 minute",
@@ -52,6 +59,9 @@ export const build = async (
   //decorator to verify whether JWT tokens are present for protected routes
   const { authDecorator } = authDecoratorFactory(fastify);
   await fastify.decorate("authenticate", authDecorator);
+
+  const emailTransport = getEmailTransporter();
+  await fastify.decorate("emailTransport", emailTransport);
 
   // register routes
   await fastify.register(authRoutes);

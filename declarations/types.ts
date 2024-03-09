@@ -1,5 +1,6 @@
 // Type Declaration file to extend application wide globals like "fastify" etc.
 import { JWT } from "@fastify/jwt";
+import { Transporter } from "nodemailer";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -10,6 +11,7 @@ declare module "fastify" {
       request: FastifyRequest,
       reply: FastifyReply
     ) => Promise<void>;
+    emailTransport: Transporter<any> | null;
   }
 }
 

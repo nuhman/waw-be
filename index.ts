@@ -1,4 +1,5 @@
 import { build } from "./app.js";
+import logger from "./utilities/logger.js";
 
 // set application timezone
 process.env.TZ = "UTC";
@@ -15,7 +16,7 @@ listeners.forEach((signal) => {
       await app.close();
       process.exit(0);
     } catch (err) {
-      console.error("Failed to close the application gracefully:", err);
+      logger.error("Failed to close the application gracefully:", err);
       process.exit(1);
     }
   });
@@ -26,7 +27,7 @@ const start = async () => {
   try {
     await app.listen({ port: 3000 });
   } catch (err) {
-    app.log.error("Failed to boot up the application:", err);
+    logger.error("Failed to boot up the application:", err);
     process.exit(1);
   }
 };

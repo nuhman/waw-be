@@ -1,6 +1,9 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
+import { Transporter } from "nodemailer";
+import logger from "../utilities/logger.js";
 import { hashPassword, matchPassword } from "../utilities/auth.utitily.js";
+import { sendEmail, formatEmailOptions } from "../utilities/email.utility.js";
 import { ERROR_CODES } from "../utilities/consts/error.const.js";
 import { GLOBAL, MESSAGES } from "../utilities/consts/app.const.js";
 import {
@@ -82,8 +85,30 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       };
 
       try {
+        const transporter: Transporter<any> | null =
+          await fastify.emailTransport;
+
+        if (!transporter) {
+          return reply.code(500).send({
+            error: "Email service is not available. Please try again!",
+          });
+        }
+
+        const emailOptions = formatEmailOptions({
+          receipentEmail: email,
+          receipentName: name,
+          key: "ev",
+          additionalInfo: {
+            emailToken,
+          },
+        });
+
+        // Use the shared sendEmail function
+        await sendEmail(transporter, emailOptions);
+
         await fastify.pg.query(userQuery);
         await fastify.pg.query(emailVerificationQuery);
+
         reply.code(201);
         return {
           userid,
@@ -93,7 +118,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         };
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
-        fastify.log.error(MESSAGE, err);
+        fastify.log.error(err);
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,
@@ -190,11 +215,19 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       try {
         // request contains user info - it was added via `authenticate` decorator
         const user = request.user;
+        logger.info("[handleUserLogout]", {
+          userid: user.userid,
+          timestamp: new Date().toISOString(),
+        });
 
         // update last_logout_at column value for the given user
         await fastify.pg.query(
           "UPDATE users SET last_logout_at = $1 WHERE userid = $2",
           [new Date().toISOString(), user.userid]
+        );
+
+        logger.info(
+          "[handleUserLogout]: Last logout timestamp updated for user to current time."
         );
 
         // clear the access token cookie
@@ -214,6 +247,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         // log out was successful
         return reply.code(200).send(MESSAGES.logoutSuccess);
       } catch (err) {
+        logger.error("[handleUserLogout]: Error encountered.", err);
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.LOGOUT_ERROR;
         return reply.code(500).send({
           errorCode: CODE,
@@ -227,6 +261,10 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
     ) => {
       try {
         const { userid, verificationCode } = request.body;
+        logger.info("[handleUserEmailVerify]", {
+          userid,
+          timestamp: new Date().toISOString(),
+        });
 
         // Check if the code matches and is not expired
         const res = await fastify.pg.query(
@@ -241,15 +279,25 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
             "UPDATE user_verification SET email_verified_status = true WHERE userid = $1",
             [userid]
           );
+
+          logger.info(
+            "[handleUserEmailVerify]: Email Verification using token completed successfullly."
+          );
+
           return reply.code(200).send(MESSAGES.emailVerifySuccess);
         }
+
+        logger.info(
+          "[handleUserEmailVerify]: Email Verification using token failed: Either token is wrong or is expired"
+        );
+
         return reply.code(401).send({
           errorCode: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.CODE,
           errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
         });
       } catch (err) {
+        logger.error("[handleUserEmailVerify]: Error encountered.", err);
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
-        fastify.log.error(MESSAGE, err);
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,
@@ -262,6 +310,11 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
     ) => {
       try {
         const { userid } = request.body;
+        logger.info("[handleUserEmailVerifyReset]", {
+          userid,
+          timestamp: new Date().toISOString(),
+        });
+
         const emailToken = nanoid(6);
         const emailTokenExpiryAt = new Date(
           new Date().getTime() + 60 * 1000
@@ -273,11 +326,14 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         };
 
         await fastify.pg.query(emailVerificationQuery);
+        logger.info(
+          "[handleUserEmailVerifyReset]: Email verification token regeneration successfully updated in the database."
+        );
 
         return reply.code(200).send(MESSAGES.emailVerifyCodeReset);
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
-        fastify.log.error(err);
+        logger.error("[handleUserEmailVerifyReset]: Error encountered.", err);
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,

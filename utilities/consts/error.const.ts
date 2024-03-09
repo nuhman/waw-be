@@ -9,6 +9,10 @@ export const ERROR_CODES = {
         CODE: "AUTH-100.2",
         MESSAGE: "Email already exists.",
       },
+      EMAIL_FAILURE: {
+        CODE: "AUTH-100.3",
+        MESSAGE: "Sending code to email failed",
+      },
     },
     LOGIN: {
       SERVER_ERROR: {
@@ -25,12 +29,12 @@ export const ERROR_CODES = {
       },
       LOGOUT_ERROR: {
         CODE: "AUTH-101.4",
-        MESSAGE: "Unexpected error occured - failed to log out."
+        MESSAGE: "Unexpected error occured - failed to log out.",
       },
       EMAIL_VERIFY_FAILURE: {
         CODE: "AUTH-101.5",
-        MESSAGE: "Verification code is invalid/missing/expired"
-      }
+        MESSAGE: "Verification code is invalid/missing/expired",
+      },
     },
     USER: {
       FETCH_ALL_USERS: {
