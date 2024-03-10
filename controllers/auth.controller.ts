@@ -256,6 +256,29 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           });
         }
 
+        // now check if user's email is verified or not
+        const userVerificationQuery = await fastify.pg.query(
+          "SELECT email_verified_status FROM user_verification WHERE userid = $1 LIMIT 1",
+          [user.userid]
+        );        
+        
+        // user verification is not completed, so return error
+        if (
+          userVerificationQuery.rowCount === 0 ||
+          !userVerificationQuery.rows[0].email_verified_status
+        ) {
+          const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_VERIFIED;
+          logger.warn({
+            requestId,
+            msg: MESSAGE,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(401).send({
+            errorCode: CODE,
+            errorMessage: MESSAGE,
+          });
+        }
+
         // sign the jwt token using the below payload. This payload can be retrieved later via `jwt.verify`
         const accessToken = await fastify.jwt.sign(
           {

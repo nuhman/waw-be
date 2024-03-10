@@ -142,7 +142,15 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
 
   fastify.post(
     "/verifyEmailReset",
-    verifyEmailResetSchema,
+    {
+      config: {
+        // Apply custom rate limiting configuration to this route
+        rateLimit: {
+          max: parseAndFetchRateLimit(process.env.TOKEN_RATE_LIMIT, 1),
+        },
+      },
+      schema: verifyEmailResetSchema.schema,
+    },
     handleUserEmailVerifyReset
   );
 };

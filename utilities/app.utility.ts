@@ -36,6 +36,11 @@ export const constructRequiredEnv = (
     "APP_ENV",
     "GLOBAL_RATE_LIMIT",
     "AUTH_RATE_LIMIT",
+    "TOKEN_RATE_LIMIT",
+    "EMAIL_SERVICE",
+    "GMAIL_APP_USER",
+    "GMAIL_APP_PASSWORD",
+    "TOKEN_EXPIRY_MINUTES",
   ];
   try {
     return [...requiredEnv, ...additionalRequiredEnv];
@@ -70,4 +75,3 @@ export const generateShortId = (length: number = 6): string => {
   const id = nanoid();
   return id;
 };
-

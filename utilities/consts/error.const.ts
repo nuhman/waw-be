@@ -15,8 +15,9 @@ export const ERROR_CODES = {
       },
       EMAIL_TRANSPORTER_FAILURE: {
         CODE: "AUTH-100.4",
-        MESSAGE: "Failed to initialize email transporter service. Please try again!"
-      }
+        MESSAGE:
+          "Failed to initialize email transporter service. Please try again!",
+      },
     },
     LOGIN: {
       SERVER_ERROR: {
@@ -38,6 +39,10 @@ export const ERROR_CODES = {
       EMAIL_VERIFY_FAILURE: {
         CODE: "AUTH-101.5",
         MESSAGE: "Verification code is invalid/missing/expired",
+      },
+      EMAIL_NOT_VERIFIED: {
+        CODE: "AUTH-101.6",
+        MESSAGE: "Email is not verified yet! Try again after verification.",
       },
     },
     USER: {

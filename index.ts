@@ -1,5 +1,12 @@
 import { build } from "./app.js";
+import dotenv from "dotenv";
+import { validateEnv, constructRequiredEnv } from "./utilities/app.utility.js";
 import logger from "./utilities/logger.js";
+
+dotenv.config();
+
+// make sure all required environment variables are loaded
+validateEnv(constructRequiredEnv());
 
 // set application timezone
 process.env.TZ = "UTC";

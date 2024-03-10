@@ -8,16 +8,8 @@ import { authDecoratorFactory } from "./decorators/auth.decorator.js";
 import authRoutes from "./routes/auth.route.js";
 import appRoutes from "./routes/app.route.js";
 import { authSchemas } from "./schemas/auth.schema.js";
-import {
-  constructRequiredEnv,
-  parseAndFetchRateLimit,
-  validateEnv,
-} from "./utilities/app.utility.js";
+import { parseAndFetchRateLimit } from "./utilities/app.utility.js";
 import { getEmailTransporter } from "./utilities/email.utility.js";
-import dotenv from "dotenv";
-
-dotenv.config();
-validateEnv(constructRequiredEnv());
 
 //method to initializes a fastify server instance
 export const build = async (
