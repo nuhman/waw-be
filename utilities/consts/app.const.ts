@@ -21,6 +21,7 @@ export const GLOBAL = {
   appEnv: {
     local: "local",
     prod: "prod",
+    test: "test",
   },
   userRole: "user",
   adminRole: "admin",
@@ -31,5 +32,3 @@ export const GLOBAL = {
     expiry: "24h",
   },
 };
-
-

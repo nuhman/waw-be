@@ -13,6 +13,7 @@ export const authDecoratorFactory = (fastify: FastifyInstance<any>) => {
   return {
     // Middleware to authenticate requests based on JWT tokens
     authDecorator: async (request: FastifyRequest, reply: FastifyReply) => {
+      const decoratorName = "authDecorator";
       const errorResponse = {
         code: ERROR_CODES.AUTH.USER.AUTH_REQUIRED.CODE,
         message: ERROR_CODES.AUTH.USER.AUTH_REQUIRED.MESSAGE,
@@ -26,7 +27,7 @@ export const authDecoratorFactory = (fastify: FastifyInstance<any>) => {
         const token = request.cookies.access_token;
         // If no token is found, return an unauthorized response.
         if (!token) {
-          logger.error({ code: "no-token", error: logError });
+          logger.error(decoratorName, { code: "no-token", error: logError });
           return reply.status(401).send(errorResponse);
         }
 
@@ -41,7 +42,7 @@ export const authDecoratorFactory = (fastify: FastifyInstance<any>) => {
 
         // If no user is found, or the token was issued before the last logout, return unauthorized.
         if (!decoded.iat || userQuery.rowCount === 0) {
-          logger.error({
+          logger.error(decoratorName, {
             code: "no-iat-or-userid-notfound",
             error: logError,
           });
@@ -51,7 +52,7 @@ export const authDecoratorFactory = (fastify: FastifyInstance<any>) => {
         if (user.last_logout_at) {
           const lastLogoutAtDate = new Date(user.last_logout_at);
           if (decoded.iat < Math.floor(lastLogoutAtDate.getTime() / 1000)) {
-            logger.error({
+            logger.error(decoratorName, {
               code: "token-expired",
               error: logError,
             });
@@ -64,7 +65,7 @@ export const authDecoratorFactory = (fastify: FastifyInstance<any>) => {
         // Attach the decoded user to the request object for use in subsequent handlers.
         request.user = decoded;
       } catch (err) {
-        logger.error({ code: "exception", error: logError });
+        logger.error(decoratorName, { code: "exception", error: logError });
         reply.status(401).send({
           code: ERROR_CODES.AUTH.USER.TOKEN_EXPIRED.CODE,
           message: ERROR_CODES.AUTH.USER.TOKEN_EXPIRED.MESSAGE,

@@ -58,8 +58,6 @@ test.group("Auth /logout", (group) => {
       headers,
     });
 
-    response?.cookies;
-
     t.assert.equal(
       response?.statusCode,
       200,

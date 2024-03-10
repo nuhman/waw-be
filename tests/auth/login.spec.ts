@@ -43,6 +43,9 @@ test.group("Auth /login", (group) => {
   });
 
   test("Valid Credentials Lead to Successful Login and Token Issuance", async (t) => {
+    queryStub
+      .onSecondCall()
+      .resolves(mockLogin.loginEmailVerificationCheckSuccess);
     const response = await app?.inject({
       method: "POST",
       url: "/login",
@@ -108,6 +111,34 @@ test.group("Auth /login", (group) => {
         errorMessage: ERROR_CODES.AUTH.LOGIN.PASSWORD_NOT_MATCH.MESSAGE,
       },
       "Expected error response for wrong password"
+    );
+  });
+
+  test("Login Attempt with Unverified Email Returns Unauthorized Status", async (t) => {
+    queryStub
+      .onSecondCall()
+      .resolves(mockLogin.loginEmailVerificationCheckFailure);
+
+    const response = await app?.inject({
+      method: "POST",
+      url: "/login",
+      payload: mockLogin.loginUserInfoInvalidEmail,
+    });
+
+    const responseBody = JSON.parse(response?.body || "{}");
+
+    t.assert.equal(
+      response?.statusCode,
+      401,
+      "Expected status code 401 for Unverified Email for auth"
+    );
+    t.assert.deepEqual(
+      responseBody,
+      {
+        errorCode: ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_VERIFIED.CODE,
+        errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_VERIFIED.MESSAGE,
+      },
+      "Expected error response for Unverified Email"
     );
   });
 

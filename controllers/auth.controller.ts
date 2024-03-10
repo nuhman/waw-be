@@ -31,7 +31,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
     ) => {
       const requestId: string = generateShortId();
       const { name, email, password } = request.body;
-      logger.info({
+      logger.info(requestId, {
         handler: "handleUserSignup",
         requestId,
         email,
@@ -45,7 +45,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       );
       if ((userExistCheck?.rowCount || 0) > 0) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.DUPLICATE_EMAIL;
-        logger.warn({
+        logger.warn(requestId, {
           requestId,
           msg: MESSAGE,
           timestamp: new Date().toISOString(),
@@ -106,7 +106,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         if (!transporter) {
           const { CODE, MESSAGE } =
             ERROR_CODES.AUTH.SIGNUP.EMAIL_TRANSPORTER_FAILURE;
-          logger.warn({
+          logger.warn(requestId, {
             requestId,
             msg: MESSAGE,
             timestamp: new Date().toISOString(),
@@ -126,27 +126,28 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           },
         });
 
-        // Use the shared sendEmail function
-        await sendEmail(transporter, emailOptions);
-
-        logger.info({
-          requestId,
-          msg: MESSAGES.sendEmailVerificationCode,
-        });
+        // Send mail if it's not a test environment
+        if (process.env.APP_ENV !== GLOBAL.appEnv.test) {
+          await sendEmail(transporter, emailOptions);
+          logger.info(requestId, {
+            requestId,
+            msg: MESSAGES.sendEmailVerificationCode,
+          });
+        }
 
         await fastify.pg.query(userQuery);
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.userRecordsAdded,
         });
 
         await fastify.pg.query(emailVerificationQuery);
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.userVerificationRecordsAdded,
         });
 
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.executionCompleted,
           timestamp: new Date().toISOString(),
@@ -161,7 +162,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         };
       } catch (err) {
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
-        logger.error({
+        logger.error(requestId, {
           requestId,
           err,
           timestamp: new Date().toISOString(),
@@ -176,21 +177,21 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
     handleGetAllUsers: async (request: FastifyRequest, reply: FastifyReply) => {
       const requestId: string = generateShortId();
       try {
-        logger.info({
+        logger.info(requestId, {
           handler: "handleGetAllUsers",
           requestId,
           timestamp: new Date().toISOString(),
         });
 
         const { rows } = await fastify.pg.query("SELECT * FROM users");
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.executionCompleted,
           timestamp: new Date().toISOString(),
         });
         return rows;
       } catch (err) {
-        logger.error({
+        logger.error(requestId, {
           requestId,
           err,
           timestamp: new Date().toISOString(),
@@ -212,7 +213,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       try {
         const { email, password } = request.body as LoginUserInput;
 
-        logger.info({
+        logger.info(requestId, {
           handler: "handleUserLogin",
           requestId,
           email,
@@ -228,7 +229,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         // if no user with the given email is found, return error
         if (userQuery.rowCount === 0) {
           const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_EXIST;
-          logger.warn({
+          logger.warn(requestId, {
             requestId,
             msg: MESSAGE,
             timestamp: new Date().toISOString(),
@@ -245,7 +246,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         // if wrong password was given, return error
         if (!match) {
           const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.PASSWORD_NOT_MATCH;
-          logger.warn({
+          logger.warn(requestId, {
             requestId,
             msg: MESSAGE,
             timestamp: new Date().toISOString(),
@@ -260,15 +261,15 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         const userVerificationQuery = await fastify.pg.query(
           "SELECT email_verified_status FROM user_verification WHERE userid = $1 LIMIT 1",
           [user.userid]
-        );        
-        
+        );
+
         // user verification is not completed, so return error
         if (
           userVerificationQuery.rowCount === 0 ||
           !userVerificationQuery.rows[0].email_verified_status
         ) {
           const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.EMAIL_NOT_VERIFIED;
-          logger.warn({
+          logger.warn(requestId, {
             requestId,
             msg: MESSAGE,
             timestamp: new Date().toISOString(),
@@ -308,7 +309,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         // login was successful, send back the jwt token in response
         return reply.code(200).send({ accessToken });
       } catch (err) {
-        logger.error({
+        logger.error(requestId, {
           requestId,
           err,
           timestamp: new Date().toISOString(),
@@ -328,7 +329,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       try {
         // request contains user info - it was added via `authenticate` decorator
         const user = request.user;
-        logger.info({
+        logger.info(requestId, {
           handler: "handleUserLogout",
           requestId,
           userid: user.userid,
@@ -341,7 +342,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           [new Date().toISOString(), user.userid]
         );
 
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.lastLogoutUpdated,
         });
@@ -361,7 +362,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
 
         // log out was successful
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.executionCompleted,
           timestamp: new Date().toISOString(),
@@ -369,7 +370,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         return reply.code(200).send(MESSAGES.logoutSuccess);
       } catch (err) {
-        logger.error({
+        logger.error(requestId, {
           requestId,
           err,
           timestamp: new Date().toISOString(),
@@ -390,7 +391,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
       try {
         const { userid, verificationCode } = request.body;
-        logger.info({
+        logger.info(requestId, {
           handler: "handleUserEmailVerify",
           requestId,
           userid,
@@ -411,7 +412,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
             [userid]
           );
 
-          logger.info({
+          logger.info(requestId, {
             requestId,
             msg: MESSAGES.emailVerifySuccess.message,
             timestamp: new Date().toISOString(),
@@ -420,7 +421,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           return reply.code(200).send(MESSAGES.emailVerifySuccess);
         }
 
-        logger.warn({
+        logger.warn(requestId, {
           requestId,
           msg: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
           timestamp: new Date().toISOString(),
@@ -431,7 +432,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
         });
       } catch (err) {
-        logger.warn({
+        logger.warn(requestId, {
           requestId,
           err,
           timestamp: new Date().toISOString(),
@@ -451,7 +452,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
       try {
         const { userid } = request.body;
-        logger.info({
+        logger.info(requestId, {
           handler: "handleUserEmailVerifyReset",
           requestId,
           userid,
@@ -460,11 +461,6 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         const emailToken = generateShortId();
         const tokenValidMinutes = process.env.TOKEN_EXPIRY_MINUTES ?? 1;
-        console.log(
-          "tokenValidMinutes: ",
-          tokenValidMinutes,
-          process.env.TOKEN_EXPIRY_MINUTES
-        );
         const expiryMinutes = Number(tokenValidMinutes) * 60 * 1000;
         const emailTokenExpiryAt = new Date(
           new Date().getTime() + expiryMinutes
@@ -481,7 +477,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         if (!transporter) {
           const { CODE, MESSAGE } =
             ERROR_CODES.AUTH.SIGNUP.EMAIL_TRANSPORTER_FAILURE;
-          logger.warn({
+          logger.warn(requestId, {
             requestId,
             msg: MESSAGE,
             timestamp: new Date().toISOString(),
@@ -503,15 +499,16 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           },
         });
 
-        await sendEmail(transporter, emailOptions);
-
-        logger.info({
-          requestId,
-          msg: MESSAGES.sendEmailVerificationCode,
-        });
+        if (process.env.APP_ENV !== GLOBAL.appEnv.test) {
+          await sendEmail(transporter, emailOptions);
+          logger.info(requestId, {
+            requestId,
+            msg: MESSAGES.sendEmailVerificationCode,
+          });
+        }
 
         await fastify.pg.query(emailVerificationQuery);
-        logger.info({
+        logger.info(requestId, {
           requestId,
           msg: MESSAGES.emailtokenRegenerated,
           timestamp: new Date().toISOString(),
@@ -519,7 +516,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         return reply.code(200).send(MESSAGES.emailVerifyCodeReset);
       } catch (err) {
-        logger.info({
+        logger.info(requestId, {
           requestId,
           err,
           timestamp: new Date().toISOString(),

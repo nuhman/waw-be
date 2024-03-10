@@ -4,6 +4,7 @@ import { apiClient } from "@japa/api-client";
 
 // Alter env variables to suit testing needs
 process.env.AUTH_RATE_LIMIT = "100";
+process.env.APP_ENV = "test";
 
 processCLIArgs(process.argv.splice(2));
 configure({

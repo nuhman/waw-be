@@ -16,6 +16,7 @@ const sample = {
   jwtToken: "eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
   jwtCookie: "access_token=eyJhbGciOiJI.UzI1NiIsInR5cCI6.IkpXVCJ9",
   jwtIssuedTimeStamps: [{ low: 1709798672, high: 1709798972 }],
+  verificationCode: "7A9C01",
 };
 
 const users = [
@@ -116,6 +117,34 @@ const loginSuccessResponse = {
   accessToken: sample.jwtToken,
 };
 
+const loginEmailVerificationCheckSuccess = {
+  rowCount: 1,
+  rows: [{ email_verified_status: true }],
+};
+
+const loginEmailVerificationCheckFailure = {
+  rowCount: 1,
+  rows: [{ email_verified_status: false }],
+};
+
+const emailVerificationRequest = {
+  userid: sample.userids[1],
+  verificationCode: sample.verificationCode,
+};
+
+const emailResetVerificationRequest = {
+  userid: sample.userids[1],
+};
+
+export const sampleQueryRow = {
+  rowExists: {
+    rowCount: 1,
+  },
+  rowNotExists: {
+    rowCount: 0,
+  },
+};
+
 // group related values together for export
 export const mockUsers = {
   users,
@@ -140,8 +169,15 @@ export const mockLogin = {
   loginEmailQuerySuccessResponse,
   loginEmailQueryFailureResponse,
   loginSuccessResponse,
+  loginEmailVerificationCheckSuccess,
+  loginEmailVerificationCheckFailure,
 };
 
 export const headers = {
   cookie: sample.jwtCookie,
+};
+
+export const mockVerification = {
+  emailVerificationRequest,
+  emailResetVerificationRequest,
 };

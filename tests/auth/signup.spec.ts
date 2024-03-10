@@ -28,7 +28,8 @@ test.group("Auth /signup", (group) => {
     if (app) {
       queryStub = sinon.stub(app.pg, "query");
       queryStub.onFirstCall().resolves(mockRegister.email.notExists); // Simulate that the duplicate user does not exist
-      queryStub.onSecondCall().resolves(mockRegister.registerSuccessResponse); // Simulate successful insertion
+      queryStub.onSecondCall().resolves(mockRegister.registerSuccessResponse); // Simulate successful user insertion
+      queryStub.onThirdCall().resolves({ rowCount: 0 }); // Simulate user_verification record insertion
     }
   });
 
