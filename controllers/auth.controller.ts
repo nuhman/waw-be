@@ -539,7 +539,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         console.log({
           user,
-          BEFOREUPDATEFIELDS: updateFields,
+          updateFields,
         });
 
         logger.info(requestId, {
@@ -585,12 +585,31 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           values,
         });
 
+        let passwordChanged = false;
+
         // Handle password change logic separately
         if (updateFields.password && updateFields.new_password) {
+          // get userdetails to fetch the current passwordhash of the user
+          const currentUser: UserCompleteSchema | null = await fetchUseryUserId(
+            fastify,
+            user.userid
+          );
+
+          console.log(
+            "password needs to be changed and current user: ",
+            currentUser
+          );
+
+          if (!currentUser) {
+            return reply
+              .code(400)
+              .send({ message: "User record does not exist!" });
+          }
+
           // Verify the current password
           const passwordIsValid = await matchPassword(
             updateFields.password,
-            updateFields.new_password
+            currentUser.passwordhash
           );
           if (!passwordIsValid) {
             return reply
@@ -604,7 +623,12 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           );
           setClauses.push(`passwordhash = $${setClauses.length + 1}`);
           values.push(hashedNewPassword || "");
+          passwordChanged = true;
         }
+
+        console.log({
+          setClauses,
+        });
 
         // No fields provided to update
         if (setClauses.length === 0) {
@@ -625,6 +649,26 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           text: queryText,
           values,
         });
+
+        if (passwordChanged) {
+          await fastify.pg.query(
+            "UPDATE users SET last_logout_at = $1 WHERE userid = $2",
+            [new Date().toISOString(), user.userid]
+          );
+
+          const isLocalEnv = process.env.APP_ENV === GLOBAL.appEnv.local;
+          reply.clearCookie(GLOBAL.authCookie.name, {
+            path: GLOBAL.authCookie.path,
+            httpOnly: !isLocalEnv,
+            secure: !isLocalEnv,
+            sameSite: GLOBAL.authCookie.sameSite as
+              | boolean
+              | "strict"
+              | "lax"
+              | "none"
+              | undefined,
+          });
+        }
 
         console.log({
           res,
@@ -677,5 +721,25 @@ const fetchEmailByUserId = async (
     return query.rows[0].email;
   } catch {
     return "";
+  }
+};
+
+const fetchUseryUserId = async (
+  fastify: FastifyInstance,
+  userid: string
+): Promise<UserCompleteSchema | null> => {
+  try {
+    const query = await fastify.pg.query(
+      "SELECT * FROM users WHERE userid = $1 LIMIT 1",
+      [userid]
+    );
+
+    // if no user with the given userid is found, return null
+    if (query.rowCount === 0) {
+      return null;
+    }
+    return query.rows[0];
+  } catch {
+    return null;
   }
 };
