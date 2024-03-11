@@ -17,6 +17,7 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserLogout,
     handleUserEmailVerify,
     handleUserEmailVerifyReset,
+    handleUserUpdate,
   } = authControllerFactory(fastify);
 
   // Define schema for user registration endpoint.
@@ -152,6 +153,29 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
       schema: verifyEmailResetSchema.schema,
     },
     handleUserEmailVerifyReset
+  );
+
+  const updateUserSchema = {
+    schema: {
+      description: "Update profile details of a logged in user",
+      tags: ["User", "Update"],
+      summary: "Update profile details of a logged in user",
+      body: $ref("updateUserSchema"),
+      response: {
+        200: $ref("registerUserSuccessSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  // Update user info
+  fastify.patch(
+    "/userUpdate",
+    {
+      preValidation: [fastify.authenticate], // Ensure user is authenticated
+      schema: updateUserSchema.schema,
+    },
+    handleUserUpdate
   );
 };
 

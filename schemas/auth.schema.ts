@@ -83,12 +83,30 @@ const emailVerificationSuccessSchema = z.object({
 });
 
 const emailVerificationResetRequestSchema = z.object({
-  userid: z.string()
+  userid: z.string(),
 });
 
 export type EmailVerificationResetInput = z.infer<
   typeof emailVerificationResetRequestSchema
 >;
+
+const updateUserSchema = z.object({
+  name: z.string().optional(),
+  email: z
+    .string({
+      invalid_type_error: "email must be a string",
+    })
+    .email()
+    .optional(),
+  password: z.string().min(6).optional(),
+  new_password: z.string().min(6).optional(),
+});
+
+export type UserUpdateSchema = z.infer<typeof updateUserSchema>;
+
+const updateUserSuccessSchema = z.object({
+  message: z.string(),
+});
 
 export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   registerUserSchema,
@@ -100,4 +118,6 @@ export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   emailVerificationRequestSchema,
   emailVerificationSuccessSchema,
   emailVerificationResetRequestSchema,
+  updateUserSchema,
+  updateUserSuccessSchema,
 });

@@ -13,6 +13,7 @@ import {
   UserCompleteSchema,
   EmailVerificationInput,
   EmailVerificationResetInput,
+  UserUpdateSchema,
 } from "../schemas/auth.schema.js";
 
 /**
@@ -522,6 +523,134 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           timestamp: new Date().toISOString(),
         });
         const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserUpdate: async (request: FastifyRequest, reply: FastifyReply) => {
+      const requestId: string = generateShortId();
+
+      try {
+        // request contains user info - it was added via `authenticate` decorator
+        const user = request.user;
+        const updateFields = request.body as UserUpdateSchema; // Fields to update
+
+        console.log({
+          user,
+          BEFOREUPDATEFIELDS: updateFields,
+        });
+
+        logger.info(requestId, {
+          handler: "handleUserLogout",
+          requestId,
+          userid: user.userid,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Password update validation
+        const wantsPasswordChange =
+          updateFields.password || updateFields.new_password;
+        if (
+          wantsPasswordChange &&
+          !(updateFields.password && updateFields.new_password)
+        ) {
+          return reply.code(400).send({
+            message:
+              "To change password, both 'password' AND 'new_password' must be provided. If you did not intend to change password, remove both fields!",
+          });
+        }
+
+        // Construct the update query dynamically based on provided fields
+        const setClauses: Array<string> = [];
+        const values: Array<string | string[] | undefined> = [];
+
+        Object.keys(updateFields).forEach((key: string, index: number) => {
+          console.log("key: ", key, " index: ", index);
+          const value: string | string[] | undefined =
+            updateFields[key as keyof typeof updateFields];
+          console.log("value: ", value);
+          if (
+            value !== undefined &&
+            !(key === "password" || key === "new_password")
+          ) {
+            setClauses.push(`${key} = $${index + 1}`);
+            values.push(value);
+          }
+        });
+
+        console.log({
+          setClauses,
+          values,
+        });
+
+        // Handle password change logic separately
+        if (updateFields.password && updateFields.new_password) {
+          // Verify the current password
+          const passwordIsValid = await matchPassword(
+            updateFields.password,
+            updateFields.new_password
+          );
+          if (!passwordIsValid) {
+            return reply
+              .code(400)
+              .send({ message: "Current password is incorrect." });
+          }
+
+          // Hash new password
+          const hashedNewPassword = await hashPassword(
+            updateFields.new_password
+          );
+          setClauses.push(`passwordhash = $${setClauses.length + 1}`);
+          values.push(hashedNewPassword || "");
+        }
+
+        // No fields provided to update
+        if (setClauses.length === 0) {
+          return reply.code(400).send({ message: "No update fields provided" });
+        }
+
+        const queryText = `UPDATE users SET ${setClauses.join(
+          ", "
+        )} WHERE userid = $${
+          setClauses.length + 1
+        } RETURNING userid, name, email, role`;
+        console.log({
+          queryText,
+        });
+        values.push(user.userid);
+
+        const res = await fastify.pg.query({
+          text: queryText,
+          values,
+        });
+
+        console.log({
+          res,
+        });
+
+        logger.info(requestId, {
+          requestId,
+          msg: MESSAGES.lastLogoutUpdated,
+        });
+
+        // log out was successful
+        logger.info(requestId, {
+          requestId,
+          msg: MESSAGES.executionCompleted,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(200).send(res.rows[0]);
+      } catch (err) {
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.LOGOUT_ERROR;
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,
