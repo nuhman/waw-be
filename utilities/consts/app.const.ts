@@ -8,6 +8,22 @@ export const MESSAGES = {
   emailVerifyCodeReset: {
     message: "New verification code have been sent to your registered email!",
   },
+  noUpdateFields: {
+    message: "No update fields provided",
+  },
+  userRecordNotExist: {
+    message: "User record does not exist!",
+  },
+  currentPwdIncorrect: {
+    message: "Current password is incorrect.",
+  },
+  passwordChangeFieldsRequired: {
+    message:
+      "To change password, both 'password' AND 'new_password' must be provided!",
+  },
+  userUpdateSuccess: {
+    message: "Successfully updated user!",
+  },
   sendEmailVerificationCode: "Send verification code to the email provided",
   userRecordsAdded: "Added record to the users table",
   userVerificationRecordsAdded: "Added record to the user_verification table",

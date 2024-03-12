@@ -90,6 +90,20 @@ export type EmailVerificationResetInput = z.infer<
   typeof emailVerificationResetRequestSchema
 >;
 
+const updateUserBasicSchema = z.object({
+  name: z.string().optional(),
+  role: z.array(z.string()).optional(),
+});
+
+export type UserUpdateBasicSchema = z.infer<typeof updateUserBasicSchema>;
+
+const updateUserPasswordSchema = z.object({
+  password: z.string().min(6).optional(),
+  new_password: z.string().min(6).optional(),
+});
+
+export type UserUpdateUserSchema = z.infer<typeof updateUserPasswordSchema>;
+
 const updateUserSchema = z.object({
   name: z.string().optional(),
   email: z
@@ -120,4 +134,6 @@ export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   emailVerificationResetRequestSchema,
   updateUserSchema,
   updateUserSuccessSchema,
+  updateUserBasicSchema,
+  updateUserPasswordSchema,
 });

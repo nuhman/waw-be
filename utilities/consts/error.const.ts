@@ -67,6 +67,13 @@ export const ERROR_CODES = {
         MESSAGE:
           "Authentication failed: 'access_token' cookie missing or expired",
       },
+      UPDATE: {
+        SERVER_ERROR: {
+          CODE: "AUTH-000.6",
+          MESSAGE:
+            "Update process failed due to server error",
+        },
+      },
     },
   },
 };

@@ -17,7 +17,8 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserLogout,
     handleUserEmailVerify,
     handleUserEmailVerifyReset,
-    handleUserUpdate,
+    handleUserBasicUpdate,
+    handleUserPasswordUpdate,
   } = authControllerFactory(fastify);
 
   // Define schema for user registration endpoint.
@@ -155,12 +156,12 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserEmailVerifyReset
   );
 
-  const updateUserSchema = {
+  const updateUserBasicSchema = {
     schema: {
-      description: "Update profile details of a logged in user",
+      description: "Update basic profile details of a logged in user",
       tags: ["User", "Update"],
-      summary: "Update profile details of a logged in user",
-      body: $ref("updateUserSchema"),
+      summary: "Update basic profile details of a logged in user",
+      body: $ref("updateUserBasicSchema"),
       response: {
         200: $ref("registerUserSuccessSchema"),
         409: $ref("authFailureSchema"),
@@ -168,14 +169,35 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
   };
 
-  // Update user info
   fastify.patch(
-    "/userUpdate",
+    "/userBasicUpdate",
     {
       preValidation: [fastify.authenticate], // Ensure user is authenticated
-      schema: updateUserSchema.schema,
+      schema: updateUserBasicSchema.schema,
     },
-    handleUserUpdate
+    handleUserBasicUpdate
+  );
+
+  const updateUserPasswordSchema = {
+    schema: {
+      description: "Update password of a logged in user",
+      tags: ["User", "Update"],
+      summary: "Update password of a logged in user",
+      body: $ref("updateUserPasswordSchema"),
+      response: {
+        200: $ref("updateUserSuccessSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  fastify.patch(
+    "/userPasswordUpdate",
+    {
+      preValidation: [fastify.authenticate], // Ensure user is authenticated
+      schema: updateUserPasswordSchema.schema,
+    },
+    handleUserPasswordUpdate
   );
 };
 

@@ -529,110 +529,44 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
       }
     },
-    handleUserUpdate: async (request: FastifyRequest, reply: FastifyReply) => {
+    handleUserBasicUpdate: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
       const requestId: string = generateShortId();
-
       try {
-        // request contains user info - it was added via `authenticate` decorator
         const user = request.user;
         const updateFields = request.body as UserUpdateSchema; // Fields to update
 
-        console.log({
-          user,
-          updateFields,
-        });
-
         logger.info(requestId, {
-          handler: "handleUserLogout",
+          handler: "handleUserBasicUpdate",
           requestId,
           userid: user.userid,
+          updateFields,
           timestamp: new Date().toISOString(),
         });
-
-        // Password update validation
-        const wantsPasswordChange =
-          updateFields.password || updateFields.new_password;
-        if (
-          wantsPasswordChange &&
-          !(updateFields.password && updateFields.new_password)
-        ) {
-          return reply.code(400).send({
-            message:
-              "To change password, both 'password' AND 'new_password' must be provided. If you did not intend to change password, remove both fields!",
-          });
-        }
 
         // Construct the update query dynamically based on provided fields
         const setClauses: Array<string> = [];
         const values: Array<string | string[] | undefined> = [];
 
         Object.keys(updateFields).forEach((key: string, index: number) => {
-          console.log("key: ", key, " index: ", index);
           const value: string | string[] | undefined =
             updateFields[key as keyof typeof updateFields];
-          console.log("value: ", value);
-          if (
-            value !== undefined &&
-            !(key === "password" || key === "new_password")
-          ) {
+          if (value !== undefined) {
             setClauses.push(`${key} = $${index + 1}`);
             values.push(value);
           }
         });
 
-        console.log({
-          setClauses,
-          values,
-        });
-
-        let passwordChanged = false;
-
-        // Handle password change logic separately
-        if (updateFields.password && updateFields.new_password) {
-          // get userdetails to fetch the current passwordhash of the user
-          const currentUser: UserCompleteSchema | null = await fetchUseryUserId(
-            fastify,
-            user.userid
-          );
-
-          console.log(
-            "password needs to be changed and current user: ",
-            currentUser
-          );
-
-          if (!currentUser) {
-            return reply
-              .code(400)
-              .send({ message: "User record does not exist!" });
-          }
-
-          // Verify the current password
-          const passwordIsValid = await matchPassword(
-            updateFields.password,
-            currentUser.passwordhash
-          );
-          if (!passwordIsValid) {
-            return reply
-              .code(400)
-              .send({ message: "Current password is incorrect." });
-          }
-
-          // Hash new password
-          const hashedNewPassword = await hashPassword(
-            updateFields.new_password
-          );
-          setClauses.push(`passwordhash = $${setClauses.length + 1}`);
-          values.push(hashedNewPassword || "");
-          passwordChanged = true;
-        }
-
-        console.log({
-          setClauses,
-        });
-
         // No fields provided to update
         if (setClauses.length === 0) {
-          return reply.code(400).send({ message: "No update fields provided" });
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.noUpdateFields,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.noUpdateFields);
         }
 
         const queryText = `UPDATE users SET ${setClauses.join(
@@ -640,43 +574,11 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         )} WHERE userid = $${
           setClauses.length + 1
         } RETURNING userid, name, email, role`;
-        console.log({
-          queryText,
-        });
         values.push(user.userid);
 
         const res = await fastify.pg.query({
           text: queryText,
           values,
-        });
-
-        if (passwordChanged) {
-          await fastify.pg.query(
-            "UPDATE users SET last_logout_at = $1 WHERE userid = $2",
-            [new Date().toISOString(), user.userid]
-          );
-
-          const isLocalEnv = process.env.APP_ENV === GLOBAL.appEnv.local;
-          reply.clearCookie(GLOBAL.authCookie.name, {
-            path: GLOBAL.authCookie.path,
-            httpOnly: !isLocalEnv,
-            secure: !isLocalEnv,
-            sameSite: GLOBAL.authCookie.sameSite as
-              | boolean
-              | "strict"
-              | "lax"
-              | "none"
-              | undefined,
-          });
-        }
-
-        console.log({
-          res,
-        });
-
-        logger.info(requestId, {
-          requestId,
-          msg: MESSAGES.lastLogoutUpdated,
         });
 
         // log out was successful
@@ -694,7 +596,125 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           timestamp: new Date().toISOString(),
         });
 
-        const { CODE, MESSAGE } = ERROR_CODES.AUTH.LOGIN.LOGOUT_ERROR;
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserPasswordUpdate: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
+      const requestId: string = generateShortId();
+      try {
+        const user = request.user;
+        const updateFields = request.body as UserUpdateSchema; // Fields to update
+
+        logger.info(requestId, {
+          handler: "handleUserPasswordUpdate",
+          requestId,
+          userid: user.userid,
+          updateFields,
+          timestamp: new Date().toISOString(),
+        });
+
+        if (!(updateFields.password && updateFields.new_password)) {
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.passwordChangeFieldsRequired,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.passwordChangeFieldsRequired);
+        }
+
+        // get userdetails to fetch the current passwordhash of the user
+        const currentUser: UserCompleteSchema | null = await fetchUseryUserId(
+          fastify,
+          user.userid
+        );
+
+        if (!currentUser) {
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.userRecordNotExist,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.userRecordNotExist);
+        }
+
+        const passwordIsValid = await matchPassword(
+          updateFields.password || "",
+          currentUser.passwordhash
+        );
+        if (!passwordIsValid) {
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.currentPwdIncorrect,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.currentPwdIncorrect);
+        }
+
+        // Hash new password
+        const hashedNewPassword = await hashPassword(
+          updateFields.new_password || ""
+        );
+
+        await fastify.pg.query(
+          "UPDATE users SET passwordhash = $1, updated_at = $2 WHERE userid = $3",
+          [hashedNewPassword, new Date().toISOString(), user.userid]
+        );
+
+        logger.info(requestId, {
+          requestId,
+          userid: user.userid,
+          msg: "User Password Changed",
+          timestamp: new Date().toISOString(),
+        });
+
+        await fastify.pg.query(
+          "UPDATE users SET last_logout_at = $1 WHERE userid = $2",
+          [new Date().toISOString(), user.userid]
+        );
+
+        logger.info(requestId, {
+          requestId,
+          userid: user.userid,
+          msg: "User log out data updated",
+          timestamp: new Date().toISOString(),
+        });
+
+        const isLocalEnv = process.env.APP_ENV === GLOBAL.appEnv.local;
+        reply.clearCookie(GLOBAL.authCookie.name, {
+          path: GLOBAL.authCookie.path,
+          httpOnly: !isLocalEnv,
+          secure: !isLocalEnv,
+          sameSite: GLOBAL.authCookie.sameSite as
+            | boolean
+            | "strict"
+            | "lax"
+            | "none"
+            | undefined,
+        });
+
+        // log out was successful
+        logger.info(requestId, {
+          requestId,
+          msg: MESSAGES.executionCompleted,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(200).send(MESSAGES.userUpdateSuccess);
+      } catch (err) {
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
         return reply.code(500).send({
           errorCode: CODE,
           errorMessage: MESSAGE,
