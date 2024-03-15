@@ -7,6 +7,7 @@ const sample = {
   userRole: "user",
   userids: ["hjF7g9k", "keqwr67n"],
   plainPassword: "PlainPassword",
+  plainPassword2: "PlainPassword2",
   hashedPassword:
     "$2b$10$69zzzDuPznEG.Ur5xInJ3OI9J/h7Kmba6TRJsI8VJ/e3GT8fFhSD2",
   invalidEmail: "@mai.c",
@@ -145,6 +146,26 @@ export const sampleQueryRow = {
   },
 };
 
+const userBasicUpdateRequest = {
+  name: sample.name,
+};
+
+const userBasicUpdateResponseSuccess = {
+  rows: [
+    {
+      userid: sample.userids[0],
+      name: sample.name,
+      email: sample.email,
+      role: [sample.userRole, sample.adminRole],
+    },
+  ],
+};
+
+const userPasswordUpdateRequest = {
+  password: sample.plainPassword,
+  new_password: sample.plainPassword2,
+};
+
 // group related values together for export
 export const mockUsers = {
   users,
@@ -180,4 +201,10 @@ export const headers = {
 export const mockVerification = {
   emailVerificationRequest,
   emailResetVerificationRequest,
+};
+
+export const mockUpdate = {
+  userBasicUpdateRequest,
+  userBasicUpdateResponseSuccess,
+  userPasswordUpdateRequest,
 };

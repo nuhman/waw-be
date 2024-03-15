@@ -872,7 +872,11 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
           await fastify.pg.query(
             "UPDATE users SET email = $1, updated_at = $2 WHERE userid = $3",
-            [newEmailRow.rows[0].new_email, new Date().toISOString(), user.userid]
+            [
+              newEmailRow.rows[0].new_email,
+              new Date().toISOString(),
+              user.userid,
+            ]
           );
 
           logger.info(requestId, {
