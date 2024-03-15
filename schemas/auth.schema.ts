@@ -102,8 +102,6 @@ const updateUserPasswordSchema = z.object({
   new_password: z.string().min(6).optional(),
 });
 
-export type UserUpdateUserSchema = z.infer<typeof updateUserPasswordSchema>;
-
 const updateUserSchema = z.object({
   name: z.string().optional(),
   email: z
@@ -122,6 +120,26 @@ const updateUserSuccessSchema = z.object({
   message: z.string(),
 });
 
+const updateEmailInitRequestSchema = z.object({
+  new_email: z.string().email(),
+});
+
+export type UserEmailUpdateInitSchema = z.infer<
+  typeof updateEmailInitRequestSchema
+>;
+
+const updateEmailInitSuccessSchema = z.object({
+  message: z.string(),
+});
+
+const updateEmailVerifyRequestSchema = z.object({
+  verificationCode: z.string(),
+});
+
+export type UserEmailUpdateVerifySchema = z.infer<
+  typeof updateEmailInitRequestSchema
+>;
+
 export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   registerUserSchema,
   registerUserSuccessSchema,
@@ -136,4 +154,7 @@ export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   updateUserSuccessSchema,
   updateUserBasicSchema,
   updateUserPasswordSchema,
+  updateEmailInitRequestSchema,
+  updateEmailInitSuccessSchema,
+  updateEmailVerifyRequestSchema,
 });

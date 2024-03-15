@@ -14,6 +14,7 @@ import {
   EmailVerificationInput,
   EmailVerificationResetInput,
   UserUpdateSchema,
+  UserEmailUpdateInitSchema,
 } from "../schemas/auth.schema.js";
 
 /**
@@ -571,9 +572,10 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         const queryText = `UPDATE users SET ${setClauses.join(
           ", "
-        )} WHERE userid = $${
-          setClauses.length + 1
+        )}, updated_at = $${setClauses.length + 1} WHERE userid = $${
+          setClauses.length + 2
         } RETURNING userid, name, email, role`;
+        values.push(new Date().toISOString());
         values.push(user.userid);
 
         const res = await fastify.pg.query({
@@ -616,7 +618,6 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           handler: "handleUserPasswordUpdate",
           requestId,
           userid: user.userid,
-          updateFields,
           timestamp: new Date().toISOString(),
         });
 
@@ -721,6 +722,192 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         });
       }
     },
+    handleUserEmailUpdateInit: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
+      const requestId: string = generateShortId();
+      try {
+        const user = request.user;
+        const updateFields = request.body as UserEmailUpdateInitSchema; // Fields to update
+
+        logger.info(requestId, {
+          handler: "handleUserEmailUpdateInit",
+          requestId,
+          userid: user.userid,
+          updateFields,
+          timestamp: new Date().toISOString(),
+        });
+
+        // make sure new_email is not already present in the system
+        const newEmailCheck: UserCompleteSchema | null = await fetchUserByEmail(
+          fastify,
+          updateFields.new_email
+        );
+
+        // if new mail is already present, return error
+        if (newEmailCheck) {
+          const { MESSAGE } = ERROR_CODES.AUTH.SIGNUP.DUPLICATE_EMAIL;
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGE,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send({
+            message: MESSAGE,
+          });
+        }
+
+        const emailToken = generateShortId();
+        const tokenValidMinutes = process.env.TOKEN_EXPIRY_MINUTES ?? 1;
+        const expiryMinutes = Number(tokenValidMinutes) * 60 * 1000;
+        const emailTokenExpiryAt = new Date(
+          new Date().getTime() + expiryMinutes
+        ).toISOString();
+
+        await fastify.pg.query("DELETE FROM emails WHERE userid = $1", [
+          user.userid,
+        ]);
+
+        const newEmailQuery = {
+          text: `INSERT INTO emails (userid, current_email, new_email, email_token, email_token_expires_at, new_mail_verified)
+          VALUES($1, $2, $3, $4, $5, $6)`,
+          values: [
+            user.userid,
+            user.email,
+            updateFields.new_email,
+            emailToken,
+            emailTokenExpiryAt,
+            false,
+          ],
+        };
+
+        const transporter: Transporter<any> | null =
+          await fastify.emailTransport;
+
+        if (!transporter) {
+          const { CODE, MESSAGE } =
+            ERROR_CODES.AUTH.SIGNUP.EMAIL_TRANSPORTER_FAILURE;
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGE,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(500).send({
+            errorCode: CODE,
+            errorMessage: MESSAGE,
+          });
+        }
+
+        const emailOptions = formatEmailOptions({
+          receipentEmail: updateFields.new_email,
+          receipentName: user.name,
+          key: "ev",
+          additionalInfo: {
+            emailToken,
+          },
+        });
+
+        // Send mail if it's not a test environment
+        if (process.env.APP_ENV !== GLOBAL.appEnv.test) {
+          await sendEmail(transporter, emailOptions);
+          logger.info(requestId, {
+            requestId,
+            msg: MESSAGES.sendEmailVerificationCode,
+          });
+        }
+
+        await fastify.pg.query(newEmailQuery);
+
+        logger.info(requestId, {
+          requestId,
+          userid: user.userid,
+          msg: MESSAGES.emailTempUpdateSuccess,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(200).send(MESSAGES.emailTempUpdateSuccess);
+      } catch (err) {
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserEmailUpdateVerify: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
+      const requestId: string = generateShortId();
+      try {
+        const user = request.user;
+        const { verificationCode } = request.body as EmailVerificationInput;
+        logger.info(requestId, {
+          handler: "handleUserEmailVerify",
+          requestId,
+          userid: user.userid,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Check if the code matches and is not expired
+        const res = await fastify.pg.query(
+          "SELECT 1 FROM emails WHERE userid = $1 AND email_token = $2 AND email_token_expires_at > NOW()",
+          [user.userid, verificationCode]
+        );
+
+        // code is valid
+        if (res?.rowCount && res.rowCount > 0) {
+          // so, update email_verified status to true
+          const newEmailRow = await fastify.pg.query(
+            "UPDATE emails SET new_mail_verified = true WHERE userid = $1 RETURNING new_email",
+            [user.userid]
+          );
+
+          await fastify.pg.query(
+            "UPDATE users SET email = $1, updated_at = $2 WHERE userid = $3",
+            [newEmailRow.rows[0].new_email, new Date().toISOString(), user.userid]
+          );
+
+          logger.info(requestId, {
+            requestId,
+            msg: MESSAGES.emailVerifySuccess.message,
+            timestamp: new Date().toISOString(),
+          });
+
+          return reply.code(200).send(MESSAGES.emailVerifySuccess);
+        }
+
+        logger.warn(requestId, {
+          requestId,
+          msg: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(401).send({
+          errorCode: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.CODE,
+          errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
+        });
+      } catch (err) {
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
   };
 };
 
@@ -752,6 +939,26 @@ const fetchUseryUserId = async (
     const query = await fastify.pg.query(
       "SELECT * FROM users WHERE userid = $1 LIMIT 1",
       [userid]
+    );
+
+    // if no user with the given userid is found, return null
+    if (query.rowCount === 0) {
+      return null;
+    }
+    return query.rows[0];
+  } catch {
+    return null;
+  }
+};
+
+const fetchUserByEmail = async (
+  fastify: FastifyInstance,
+  email: string
+): Promise<UserCompleteSchema | null> => {
+  try {
+    const query = await fastify.pg.query(
+      "SELECT * FROM users WHERE email = $1 LIMIT 1",
+      [email]
     );
 
     // if no user with the given userid is found, return null

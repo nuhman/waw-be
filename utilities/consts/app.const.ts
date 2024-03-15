@@ -24,6 +24,9 @@ export const MESSAGES = {
   userUpdateSuccess: {
     message: "Successfully updated user!",
   },
+  emailTempUpdateSuccess: {
+    message: "Added new email - verification pending",
+  },
   sendEmailVerificationCode: "Send verification code to the email provided",
   userRecordsAdded: "Added record to the users table",
   userVerificationRecordsAdded: "Added record to the user_verification table",

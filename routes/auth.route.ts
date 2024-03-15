@@ -19,6 +19,8 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserEmailVerifyReset,
     handleUserBasicUpdate,
     handleUserPasswordUpdate,
+    handleUserEmailUpdateInit,
+    handleUserEmailUpdateVerify,
   } = authControllerFactory(fastify);
 
   // Define schema for user registration endpoint.
@@ -198,6 +200,50 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
       schema: updateUserPasswordSchema.schema,
     },
     handleUserPasswordUpdate
+  );
+
+  const updateUserEmailSchema = {
+    schema: {
+      description: "Initiate  email update of a logged in user",
+      tags: ["User", "Update"],
+      summary: "Initiate  email update of a logged in user",
+      body: $ref("updateEmailInitRequestSchema"),
+      response: {
+        200: $ref("updateEmailInitSuccessSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  fastify.patch(
+    "/userEmailUpdateInit",
+    {
+      preValidation: [fastify.authenticate], // Ensure user is authenticated
+      schema: updateUserEmailSchema.schema,
+    },
+    handleUserEmailUpdateInit
+  );
+
+  const updateUserEmailVerifySchema = {
+    schema: {
+      description: "Initiate  email update of a logged in user",
+      tags: ["User", "Update"],
+      summary: "Initiate  email update of a logged in user",
+      body: $ref("updateEmailVerifyRequestSchema"),
+      response: {
+        200: $ref("emailVerificationSuccessSchema"),
+        409: $ref("authFailureSchema"),
+      },
+    },
+  };
+
+  fastify.patch(
+    "/userEmailUpdateVerify",
+    {
+      preValidation: [fastify.authenticate], // Ensure user is authenticated
+      schema: updateUserEmailVerifySchema.schema,
+    },
+    handleUserEmailUpdateVerify
   );
 };
 
