@@ -10,8 +10,11 @@ complemented by timely notifications through email or SMS.
 The available features include:
 
 - User Management: Basic user registration and retrieval are currently supported.  
-  - GET `/users`: Retrieve all users  
-  - POST `/signup`: Register a new user (WIP)  
+  - Basic user registration and retrieval using email & password.  
+  - Authentication processes, including login and logout operations.  
+  - Email verification and management, enabling users to verify their email addresses using a secret token.  
+  - User profile updates, allowing for basic information, email, and password changes.  
+  - OAuth signup/login - WIP  
   
 Future components to be developed:  
 
@@ -27,6 +30,8 @@ Future components to be developed:
 - `PostgreSQL` Database  
 - `Zod` for schema validation  
 - `Japa` for unit testing, with `Sinon` for assertions  
+- `nodemailer` for email sending capabilities  
+- `winston` for logging  
 
 ### Getting Started  
 
