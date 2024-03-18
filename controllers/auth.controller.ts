@@ -15,6 +15,9 @@ import {
   EmailVerificationResetInput,
   UserUpdateSchema,
   UserEmailUpdateInitSchema,
+  PasswordResetInitReqSchema,
+  PasswordResetVerifySchema,
+  PasswordChangeSchema,
 } from "../schemas/auth.schema.js";
 
 /**
@@ -402,7 +405,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         // Check if the code matches and is not expired
         const res = await fastify.pg.query(
-          "SELECT 1 FROM user_verification WHERE userid = $1 AND email_token = $2 AND email_token_expires_at > NOW()",
+          "SELECT 1 FROM user_verification WHERE userid = $1 AND email_token = $2 ` `",
           [userid, verificationCode]
         );
 
@@ -858,7 +861,7 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         // Check if the code matches and is not expired
         const res = await fastify.pg.query(
-          "SELECT 1 FROM emails WHERE userid = $1 AND email_token = $2 AND email_token_expires_at > NOW()",
+          "SELECT 1 FROM emails WHERE userid = $1 AND email_token = $2 AND email_token_expires_at > NOW() LIMIT 1",
           [user.userid, verificationCode]
         );
 
@@ -897,6 +900,281 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
         return reply.code(401).send({
           errorCode: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.CODE,
           errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
+        });
+      } catch (err) {
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserPasswordResetInit: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
+      const requestId: string = generateShortId();
+      try {
+        const { email } = request.body as PasswordResetInitReqSchema; // Fields to update
+
+        logger.info(requestId, {
+          handler: "handleUserPasswordResetInit",
+          requestId,
+          email,
+          timestamp: new Date().toISOString(),
+        });
+
+        // make sure email is present
+        const user: UserCompleteSchema | null = await fetchUserByEmail(
+          fastify,
+          email
+        );
+
+        // if user with the given mail is not  present, return error
+        if (!user) {
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.emailNotExist.message,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.emailNotExist);
+        }
+
+        // user is present, generate token and send it to email
+        const emailToken = generateShortId();
+        const tokenValidMinutes = process.env.TOKEN_EXPIRY_MINUTES ?? 1;
+        const expiryMinutes = Number(tokenValidMinutes) * 60 * 1000;
+        const emailTokenExpiryAt = new Date(
+          new Date().getTime() + expiryMinutes
+        ).toISOString();
+
+        const passwordResetRequestQuery = {
+          text: `INSERT INTO password_reset_requests (userid, reset_code, reset_code_expires_at)
+          VALUES($1, $2, $3)`,
+          values: [user.userid, emailToken, emailTokenExpiryAt],
+        };
+
+        const transporter: Transporter<any> | null =
+          await fastify.emailTransport;
+        console.log("transporter COMPLETED");
+        if (!transporter) {
+          const { CODE, MESSAGE } =
+            ERROR_CODES.AUTH.SIGNUP.EMAIL_TRANSPORTER_FAILURE;
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGE,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(500).send({
+            errorCode: CODE,
+            errorMessage: MESSAGE,
+          });
+        }
+
+        const emailOptions = formatEmailOptions({
+          receipentEmail: email,
+          receipentName: user.name,
+          key: "ev",
+          additionalInfo: {
+            emailToken,
+          },
+        });
+
+        // Send mail if it's not a test environment
+        if (process.env.APP_ENV !== GLOBAL.appEnv.test) {
+          await sendEmail(transporter, emailOptions);
+          logger.info(requestId, {
+            requestId,
+            msg: MESSAGES.sendEmailVerificationCode,
+          });
+        }
+
+        await fastify.pg.query(
+          "DELETE FROM password_reset_requests WHERE userid = $1",
+          [user.userid]
+        );
+
+        await fastify.pg.query(passwordResetRequestQuery);
+
+        logger.info(requestId, {
+          requestId,
+          userid: user.userid,
+          msg: MESSAGES.passwordResetInit.message,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(200).send(MESSAGES.passwordResetInit);
+      } catch (err) {
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserPasswordResetVerify: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
+      const requestId: string = generateShortId();
+      try {
+        const { email, verificationCode } =
+          request.body as PasswordResetVerifySchema; // Fields to update
+
+        logger.info(requestId, {
+          handler: "handleUserPasswordResetVerify",
+          requestId,
+          email,
+          timestamp: new Date().toISOString(),
+        });
+
+        // make sure email is present
+        const user: UserCompleteSchema | null = await fetchUserByEmail(
+          fastify,
+          email
+        );
+
+        // if user with the given mail is not  present, return error
+        if (!user) {
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.emailNotExist.message,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.emailNotExist);
+        }
+
+        // Check if the code matches and is not expired
+        const res = await fastify.pg.query(
+          "SELECT 1 FROM password_reset_requests WHERE userid = $1 AND reset_code = $2 AND reset_code_expires_at > NOW() AND is_verified = FALSE LIMIT 1",
+          [user.userid, verificationCode]
+        );
+
+        // code is valid
+        if (res?.rowCount && res.rowCount > 0) {
+          // so, update verified status to true
+          await fastify.pg.query(
+            "UPDATE password_reset_requests SET status = $1, is_verified = $2 WHERE userid = $3",
+            ["completed", true, user.userid]
+          );
+
+          logger.info(requestId, {
+            requestId,
+            msg: MESSAGES.emailVerifySuccess.message,
+            timestamp: new Date().toISOString(),
+          });
+
+          return reply.code(200).send(MESSAGES.emailVerifySuccess);
+        }
+
+        logger.warn(requestId, {
+          requestId,
+          msg: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(401).send({
+          errorCode: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.CODE,
+          errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
+        });
+      } catch (err) {
+        console.log(err);
+        logger.error(requestId, {
+          requestId,
+          err,
+          timestamp: new Date().toISOString(),
+        });
+
+        const { CODE, MESSAGE } = ERROR_CODES.AUTH.USER.UPDATE.SERVER_ERROR;
+        return reply.code(500).send({
+          errorCode: CODE,
+          errorMessage: MESSAGE,
+        });
+      }
+    },
+    handleUserPasswordChange: async (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => {
+      const requestId: string = generateShortId();
+      try {
+        const { email, password } = request.body as PasswordChangeSchema; // Fields to update
+
+        logger.info(requestId, {
+          handler: "handleUserPasswordChange",
+          requestId,
+          email,
+          timestamp: new Date().toISOString(),
+        });
+
+        // make sure email is present
+        const user: UserCompleteSchema | null = await fetchUserByEmail(
+          fastify,
+          email
+        );
+
+        // if user with the given mail is not  present, return error
+        if (!user) {
+          logger.warn(requestId, {
+            requestId,
+            msg: MESSAGES.emailNotExist.message,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(400).send(MESSAGES.emailNotExist);
+        }
+
+        // Check if the password request is verified
+        const res = await fastify.pg.query(
+          "SELECT 1 FROM password_reset_requests WHERE userid = $1 AND is_verified = TRUE LIMIT 1",
+          [user.userid]
+        );
+
+        // request is verified
+        if (res?.rowCount && res.rowCount > 0) {
+          // Hash new password
+          const hashedNewPassword = await hashPassword(password);
+
+          await fastify.pg.query(
+            "UPDATE users SET passwordhash = $1, updated_at = $2 WHERE userid = $3",
+            [hashedNewPassword, new Date().toISOString(), user.userid]
+          );
+
+          await fastify.pg.query(
+            "DELETE FROM password_reset_requests WHERE userid = $1",
+            [user.userid]
+          );
+
+          logger.info(requestId, {
+            requestId,
+            userid: user.userid,
+            msg: MESSAGES.userUpdateSuccess.message,
+            timestamp: new Date().toISOString(),
+          });
+          return reply.code(200).send(MESSAGES.userUpdateSuccess);
+        }
+
+        logger.warn(requestId, {
+          requestId,
+          msg: ERROR_CODES.AUTH.USER.PASSWORD_RESET.NOT_REQUESTED.MESSAGE,
+          timestamp: new Date().toISOString(),
+        });
+
+        return reply.code(401).send({
+          errorCode: ERROR_CODES.AUTH.USER.PASSWORD_RESET.NOT_REQUESTED.CODE,
+          errorMessage:
+            ERROR_CODES.AUTH.USER.PASSWORD_RESET.NOT_REQUESTED.MESSAGE,
         });
       } catch (err) {
         logger.error(requestId, {

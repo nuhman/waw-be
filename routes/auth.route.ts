@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { $ref } from "../schemas/auth.schema.js";
 import { authControllerFactory } from "../controllers/auth.controller.js";
 import { parseAndFetchRateLimit } from "../utilities/app.utility.js";
+import { RouteSchemas } from "../schemas/route.schema.js";
 
 /**
  * Registers authentication-related routes.
@@ -21,21 +22,25 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserPasswordUpdate,
     handleUserEmailUpdateInit,
     handleUserEmailUpdateVerify,
+    handleUserPasswordResetInit,
+    handleUserPasswordResetVerify,
+    handleUserPasswordChange,
   } = authControllerFactory(fastify);
 
-  // Define schema for user registration endpoint.
-  const registerSchema = {
-    schema: {
-      description: "Sign up a new user",
-      tags: ["User", "SignUp"],
-      summary: "Sign up a new user",
-      body: $ref("registerUserSchema"),
-      response: {
-        200: $ref("registerUserSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
+  const {
+    registerSchema,
+    userSchema,
+    loginSchema,
+    verifyEmailSchema,
+    verifyEmailResetSchema,
+    updateUserBasicSchema,
+    updateUserPasswordSchema,
+    updateUserEmailSchema,
+    updateUserEmailVerifySchema,
+    resetPasswordInitSchema,
+    resetPasswordVerifySchema,
+    changePasswordSchema,
+  } = RouteSchemas;
 
   // User registration route
   fastify.post(
@@ -52,19 +57,6 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserSignup
   );
 
-  // Schema for fetching all users
-  const userSchema = {
-    schema: {
-      description: "Get all users registered on the application",
-      tags: ["User"],
-      summary: "Get all users registered on the application",
-      response: {
-        200: $ref("userSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
-
   // Route to get all users, requires authentication
   fastify.get(
     "/users",
@@ -74,21 +66,6 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
     handleGetAllUsers
   );
-
-  // Schema for user login
-  const loginSchema = {
-    schema: {
-      description: "Log In a valid user",
-      tags: ["User", "Login"],
-      summary:
-        "Log In a user if valid credentials are provided by setting jwt token cookie",
-      body: $ref("loginUserSchema"),
-      response: {
-        200: $ref("loginUserSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
 
   // User login route
   fastify.post(
@@ -115,35 +92,9 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
   );
 
   // Verify Email using secret token
-  const verifyEmailSchema = {
-    schema: {
-      description: "Verify email of a signed up user",
-      tags: ["User", "SignUp", "Verification"],
-      summary: "Verify email of a signed up user",
-      body: $ref("emailVerificationRequestSchema"),
-      response: {
-        200: $ref("emailVerificationSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
-
   fastify.post("/verifyEmail", verifyEmailSchema, handleUserEmailVerify);
 
   // Reset secret token to validate email
-  const verifyEmailResetSchema = {
-    schema: {
-      description: "Reset and send email verification code",
-      tags: ["User", "SignUp", "Verification"],
-      summary: "Reset and send email verification code",
-      body: $ref("emailVerificationResetRequestSchema"),
-      response: {
-        200: $ref("emailVerificationSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
-
   fastify.post(
     "/verifyEmailReset",
     {
@@ -158,19 +109,6 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserEmailVerifyReset
   );
 
-  const updateUserBasicSchema = {
-    schema: {
-      description: "Update basic profile details of a logged in user",
-      tags: ["User", "Update"],
-      summary: "Update basic profile details of a logged in user",
-      body: $ref("updateUserBasicSchema"),
-      response: {
-        200: $ref("registerUserSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
-
   fastify.patch(
     "/userBasicUpdate",
     {
@@ -179,19 +117,6 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     },
     handleUserBasicUpdate
   );
-
-  const updateUserPasswordSchema = {
-    schema: {
-      description: "Update password of a logged in user",
-      tags: ["User", "Update"],
-      summary: "Update password of a logged in user",
-      body: $ref("updateUserPasswordSchema"),
-      response: {
-        200: $ref("updateUserSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
 
   fastify.patch(
     "/userPasswordUpdate",
@@ -202,20 +127,7 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserPasswordUpdate
   );
 
-  const updateUserEmailSchema = {
-    schema: {
-      description: "Initiate  email update of a logged in user",
-      tags: ["User", "Update"],
-      summary: "Initiate  email update of a logged in user",
-      body: $ref("updateEmailInitRequestSchema"),
-      response: {
-        200: $ref("updateEmailInitSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
-
-  fastify.patch(
+  fastify.post(
     "/userEmailUpdateInit",
     {
       preValidation: [fastify.authenticate], // Ensure user is authenticated
@@ -224,19 +136,6 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
     handleUserEmailUpdateInit
   );
 
-  const updateUserEmailVerifySchema = {
-    schema: {
-      description: "Initiate  email update of a logged in user",
-      tags: ["User", "Update"],
-      summary: "Initiate  email update of a logged in user",
-      body: $ref("updateEmailVerifyRequestSchema"),
-      response: {
-        200: $ref("emailVerificationSuccessSchema"),
-        409: $ref("authFailureSchema"),
-      },
-    },
-  };
-
   fastify.patch(
     "/userEmailUpdateVerify",
     {
@@ -244,6 +143,30 @@ const authRoutes = async (fastify: FastifyInstance, options: object) => {
       schema: updateUserEmailVerifySchema.schema,
     },
     handleUserEmailUpdateVerify
+  );
+
+  fastify.post(
+    "/resetPasswordInit",
+    {
+      schema: resetPasswordInitSchema.schema,
+    },
+    handleUserPasswordResetInit
+  );
+
+  fastify.patch(
+    "/resetPasswordVerify",
+    {
+      schema: resetPasswordVerifySchema.schema,
+    },
+    handleUserPasswordResetVerify
+  );
+
+  fastify.patch(
+    "/changePassword",
+    {
+      schema: changePasswordSchema.schema,
+    },
+    handleUserPasswordChange
   );
 };
 

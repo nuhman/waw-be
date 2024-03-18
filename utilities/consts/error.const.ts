@@ -67,11 +67,20 @@ export const ERROR_CODES = {
         MESSAGE:
           "Authentication failed: 'access_token' cookie missing or expired",
       },
+      PASSWORD_RESET: {
+        EMAIL_NOT_EXIST: {
+          CODE: "AUTH-000.6.1",
+          MESSAGE: "Email does not exist in the system",
+        },
+        NOT_REQUESTED: {
+          CODE: "AUTH-000.6.2",
+          MESSAGE: "Password Change is not verified",
+        }
+      },
       UPDATE: {
         SERVER_ERROR: {
-          CODE: "AUTH-000.6",
-          MESSAGE:
-            "Update process failed due to server error",
+          CODE: "AUTH-000.7.1",
+          MESSAGE: "Update process failed due to server error",
         },
       },
     },

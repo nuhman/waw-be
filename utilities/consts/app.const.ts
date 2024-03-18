@@ -27,6 +27,13 @@ export const MESSAGES = {
   emailTempUpdateSuccess: {
     message: "Added new email - verification pending",
   },
+  emailNotExist: {
+    message: "Given email does not exist in our records",
+  },
+  passwordResetInit: {
+    message:
+      "If the email exists in our records, you will receive a secret token in your mailbox",
+  },
   sendEmailVerificationCode: "Send verification code to the email provided",
   userRecordsAdded: "Added record to the users table",
   userVerificationRecordsAdded: "Added record to the user_verification table",

@@ -140,6 +140,28 @@ export type UserEmailUpdateVerifySchema = z.infer<
   typeof updateEmailInitRequestSchema
 >;
 
+const resetPwdInitRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+export type PasswordResetInitReqSchema = z.infer<
+  typeof resetPwdInitRequestSchema
+>;
+
+const resetPwdVerifySchema = z.object({
+  email: z.string().email(),
+  verificationCode: z.string(),
+});
+
+export type PasswordResetVerifySchema = z.infer<typeof resetPwdVerifySchema>;
+
+const changePwdSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+export type PasswordChangeSchema = z.infer<typeof changePwdSchema>;
+
 export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   registerUserSchema,
   registerUserSuccessSchema,
@@ -157,4 +179,7 @@ export const { schemas: authSchemas, $ref } = buildJsonSchemas({
   updateEmailInitRequestSchema,
   updateEmailInitSuccessSchema,
   updateEmailVerifyRequestSchema,
+  resetPwdInitRequestSchema,
+  resetPwdVerifySchema,
+  changePwdSchema,
 });
