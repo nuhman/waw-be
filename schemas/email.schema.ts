@@ -3,7 +3,7 @@ export interface EmailOptionsInput {
   receipentName: string;
   key: string;
   additionalInfo: {
-    emailToken?: string;
+    [key: string]: string | number | object | undefined;
   };
 }
 

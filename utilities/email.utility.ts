@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 /**
  * Create and return an email transporter
  *
- * @returns {Transporter<any> | null>} transporter object created from appropriate environment variables, if possible. Null  otherwise.
+ * @returns {Transporter<any> | null} transporter object created from appropriate environment variables, if possible. Null  otherwise.
  */
 export const getEmailTransporter = (): Transporter<any> | null => {
   try {
@@ -91,7 +91,6 @@ const fetchEmailVerificationHtml = (
       tokenValidityInMinutes: tokenValidityInMinutes || "1",
     });
   } catch (err) {
-    console.log(err);
     return `<p>Thanks for registering with WAW schedule management service!</p> <p>Use the following code to complete the email verification process: <b>${verificationToken}</b></p>`;
   }
 };
@@ -111,7 +110,7 @@ export const formatEmailOptions = (options: EmailOptionsInput) => {
       emailOptions.text = `Thanks for registering with WAW schedule management service! Use the following code to complete the email verification process: ${options.additionalInfo.emailToken}`;
       emailOptions.html = fetchEmailVerificationHtml(
         options.receipentName,
-        options.additionalInfo.emailToken,
+        `${options.additionalInfo.emailToken}`,
         "1"
       );
       break;

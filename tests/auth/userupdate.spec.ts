@@ -71,10 +71,6 @@ test.group("Auth /userupdate", (group) => {
       headers,
     });
 
-    console.log({
-      response,
-    });
-
     t.assert.equal(
       response?.statusCode,
       200,
@@ -114,9 +110,6 @@ test.group("Auth /userupdate", (group) => {
       headers,
     });
 
-    console.log({
-      responseDXD: response,
-    });
     t.assert.equal(
       response?.statusCode,
       200,

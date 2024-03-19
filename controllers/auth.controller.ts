@@ -19,6 +19,14 @@ import {
   PasswordResetVerifySchema,
   PasswordChangeSchema,
 } from "../schemas/auth.schema.js";
+import {
+  addNewUser,
+  checkUserExistsByEmail,
+} from "../utilities/db/auth.utility.js";
+import {
+  mailConflictError,
+  serverError,
+} from "../utilities/error/auth.utility.js";
 
 /**
  * Creates auth-related route handlers with dependency injected fastify instance.
@@ -35,147 +43,33 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
       reply: FastifyReply
     ) => {
       const requestId: string = generateShortId();
-      const { name, email, password } = request.body;
-      logger.info(requestId, {
-        handler: "handleUserSignup",
-        requestId,
-        email,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Checks for existing user by email.
-      const userExistCheck = await fastify.pg.query(
-        "SELECT 1 FROM users WHERE email = $1 LIMIT 1",
-        [email]
-      );
-      if ((userExistCheck?.rowCount || 0) > 0) {
-        const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.DUPLICATE_EMAIL;
-        logger.warn(requestId, {
-          requestId,
-          msg: MESSAGE,
-          timestamp: new Date().toISOString(),
-        });
-        return reply.code(409).send({
-          errorCode: CODE,
-          errorMessage: MESSAGE,
-        });
-      }
-
-      // New user registration logic.
-      const userid = nanoid();
-      const createdAt = new Date().toISOString();
-      const role = [GLOBAL.userRole];
-      const hashedPassword = await hashPassword(password);
-
-      const userQuery = {
-        text: `INSERT INTO users (userid, name, email, passwordhash, created_at, updated_at, role, last_logout_at)
-                        VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
-        values: [
-          userid,
-          name,
-          email,
-          hashedPassword,
-          createdAt,
-          createdAt,
-          role,
-          null,
-        ],
-      };
-
-      // email verification
-      const emailToken = generateShortId();
-      const tokenValidMinutes = process.env.TOKEN_EXPIRY_MINUTES ?? 1;
-      const expiryMinutes = Number(tokenValidMinutes) * 60 * 1000;
-      const emailTokenExpiryAt = new Date(
-        new Date().getTime() + expiryMinutes
-      ).toISOString();
-
-      const emailVerificationQuery = {
-        text: `INSERT INTO user_verification (userid, email_token, email_token_expires_at, email_verified_status, phonenumber_token, phonenumber_token_expires_at, phonenumber_verified_status)
-        VALUES($1, $2, $3, $4, $5, $6, $7)`,
-        values: [
-          userid,
-          emailToken,
-          emailTokenExpiryAt,
-          false,
-          emailToken,
-          emailTokenExpiryAt,
-          false,
-        ],
-      };
 
       try {
-        const transporter: Transporter<any> | null =
-          await fastify.emailTransport;
-
-        if (!transporter) {
-          const { CODE, MESSAGE } =
-            ERROR_CODES.AUTH.SIGNUP.EMAIL_TRANSPORTER_FAILURE;
-          logger.warn(requestId, {
-            requestId,
-            msg: MESSAGE,
-            timestamp: new Date().toISOString(),
-          });
-          return reply.code(500).send({
-            errorCode: CODE,
-            errorMessage: MESSAGE,
-          });
-        }
-
-        const emailOptions = formatEmailOptions({
-          receipentEmail: email,
-          receipentName: name,
-          key: "ev",
-          additionalInfo: {
-            emailToken,
-          },
-        });
-
-        // Send mail if it's not a test environment
-        if (process.env.APP_ENV !== GLOBAL.appEnv.test) {
-          await sendEmail(transporter, emailOptions);
-          logger.info(requestId, {
-            requestId,
-            msg: MESSAGES.sendEmailVerificationCode,
-          });
-        }
-
-        await fastify.pg.query(userQuery);
-        logger.info(requestId, {
-          requestId,
-          msg: MESSAGES.userRecordsAdded,
-        });
-
-        await fastify.pg.query(emailVerificationQuery);
-        logger.info(requestId, {
-          requestId,
-          msg: MESSAGES.userVerificationRecordsAdded,
-        });
+        const { email } = request.body;
 
         logger.info(requestId, {
+          handler: "handleUserSignup",
           requestId,
-          msg: MESSAGES.executionCompleted,
-          timestamp: new Date().toISOString(),
-        });
-
-        reply.code(201);
-        return {
-          userid,
-          name,
           email,
-          role,
-        };
-      } catch (err) {
-        const { CODE, MESSAGE } = ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR;
-        logger.error(requestId, {
-          requestId,
-          err,
           timestamp: new Date().toISOString(),
         });
-        return reply.code(500).send({
-          errorCode: CODE,
-          errorMessage: MESSAGE,
-        });
+
+        // Checks for existing user by email.
+        const userExistCheck = await checkUserExistsByEmail(fastify, email);
+
+        // if error, return conflict error
+        if (userExistCheck) {
+          return mailConflictError(reply, requestId);
+        }
+
+        // if no errors, add the user
+        return addNewUser(fastify, reply, requestId, request.body);
+      } catch (err) {
+        return serverError(
+          reply,
+          requestId,
+          ERROR_CODES.AUTH.SIGNUP.SERVER_ERROR
+        );
       }
     },
     // Handles fetching all registered users.
@@ -405,10 +299,9 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         // Check if the code matches and is not expired
         const res = await fastify.pg.query(
-          "SELECT 1 FROM user_verification WHERE userid = $1 AND email_token = $2 ` `",
+          "SELECT 1 FROM user_verification WHERE userid = $1 AND email_token = $2 AND email_token_expires_at > NOW() LIMIT 1",
           [userid, verificationCode]
         );
-
         // code is valid
         if (res?.rowCount && res.rowCount > 0) {
           // so, update email_verified status to true
@@ -962,7 +855,6 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
 
         const transporter: Transporter<any> | null =
           await fastify.emailTransport;
-        console.log("transporter COMPLETED");
         if (!transporter) {
           const { CODE, MESSAGE } =
             ERROR_CODES.AUTH.SIGNUP.EMAIL_TRANSPORTER_FAILURE;
@@ -1090,7 +982,6 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           errorMessage: ERROR_CODES.AUTH.LOGIN.EMAIL_VERIFY_FAILURE.MESSAGE,
         });
       } catch (err) {
-        console.log(err);
         logger.error(requestId, {
           requestId,
           err,
