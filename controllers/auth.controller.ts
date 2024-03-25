@@ -3,7 +3,7 @@ import logger from "../utilities/logger.js";
 import { matchPassword } from "../utilities/auth.utitily.js";
 import { generateShortId } from "../utilities/app.utility.js";
 import { ERROR_CODES } from "../utilities/consts/error.const.js";
-import { GLOBAL, } from "../utilities/consts/app.const.js";
+import { GLOBAL } from "../utilities/consts/app.const.js";
 import {
   RegisterUserInput,
   LoginUserInput,
@@ -137,11 +137,6 @@ export const authControllerFactory = (fastify: FastifyInstance) => {
           );
         }
         const user: UserCompleteSchema = userQuery.rows[0];
-
-        console.log({
-          user,
-          password,
-        });
 
         // verify the password using bcrypt
         const match = await matchPassword(password, user.passwordhash);

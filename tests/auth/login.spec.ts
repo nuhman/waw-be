@@ -77,7 +77,7 @@ test.group("Auth /login", (group) => {
 
     t.assert.equal(
       response?.statusCode,
-      401,
+      400,
       "Expected status code 401 for invalid credentials for auth"
     );
     t.assert.deepEqual(

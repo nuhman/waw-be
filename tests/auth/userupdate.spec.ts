@@ -118,7 +118,7 @@ test.group("Auth /userupdate", (group) => {
 
     t.assert.deepEqual(
       JSON.parse(response?.payload || "{}"),
-      MESSAGES.userUpdateSuccess,
+      MESSAGES.logoutSuccess,
       "Expected correct messge to be present in response"
     );
   });

@@ -337,8 +337,8 @@ export const resendEmailVerificationCode = async (
   }
 
   await deliverEmail(fastify, reply, requestId, {
-    receipentEmail: emailRes.rows[0].email,
-    receipentName: emailRes.rows[0].email,
+    receipentEmail: (emailRes.rows && emailRes.rows[0].email) || "",
+    receipentName: (emailRes.rows && emailRes.rows[0].email) || "",
     key: "ev",
     additionalInfo: {
       emailToken: token.token,
