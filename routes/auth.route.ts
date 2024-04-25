@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { $ref } from "../schemas/auth.schema.js";
 import { authControllerFactory } from "../controllers/auth.controller.js";
 import { parseAndFetchRateLimit } from "../utilities/app.utility.js";
-import { RouteSchemas } from "../schemas/route.schema.js";
+import { RouteSchemas } from "../schemas/route.auth.schema.js";
 
 /**
  * Registers authentication-related routes.

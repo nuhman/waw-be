@@ -148,5 +148,5 @@ export const RouteSchemas = {
         409: $ref("authFailureSchema"),
       },
     },
-  },
+  },  
 };

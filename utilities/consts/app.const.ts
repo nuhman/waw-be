@@ -41,6 +41,7 @@ export const MESSAGES = {
   emailtokenRegenerated:
     "Email verification token regeneration successfully updated in the database",
   executionCompleted: "Method execution completed",
+  availabilityCreated: "Added weekly availability for user",
 };
 
 export const GLOBAL = {

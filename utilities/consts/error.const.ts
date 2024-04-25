@@ -75,13 +75,21 @@ export const ERROR_CODES = {
         NOT_REQUESTED: {
           CODE: "AUTH-000.6.2",
           MESSAGE: "Password Change is not verified",
-        }
+        },
       },
       UPDATE: {
         SERVER_ERROR: {
           CODE: "AUTH-000.7.1",
           MESSAGE: "Update process failed due to server error",
         },
+      },
+    },
+  },
+  AVAILABILITY: {
+    CREATE: {
+      SERVER_ERROR: {
+        CODE: "AVAIL-100.1",
+        MESSAGE: "Creating availability process failed due to a server error.",
       },
     },
   },
